@@ -1,8 +1,18 @@
-blinker==1.9.0
-click==8.2.1
-colorama==0.4.6
+# Core Flask dependencies (already in your file)
 Flask==3.1.1
-itsdangerous==2.2.0
+Werkzeug==3.1.3
 Jinja2==3.1.6
 MarkupSafe==3.0.2
-Werkzeug==3.1.3
+itsdangerous==2.2.0
+click==8.2.1
+blinker==1.9.0
+colorama==0.4.6
+
+# Additional dependencies needed for the quiz application
+Flask-Cors==4.0.0        # For handling cross-origin requests from WordPress
+requests==2.31.0         # For making HTTP requests to WordPress if needed
+python-dotenv==1.0.1     # For managing environment variables
+gunicorn==21.2.0         # Production WSGI server
+psycopg2-binary==2.9.9   # PostgreSQL adapter (for leaderboard database)
+SQLAlchemy==2.0.28       # SQL toolkit and ORM
+Flask-SQLAlchemy==3.1.1  # Flask integration for SQLAlchemy
