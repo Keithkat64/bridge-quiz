@@ -112,22 +112,26 @@ def parse_quiz_data(content):
             print(f"No hand number found in section {i+1}")
             continue
         
-        # Extract cards
+        # Extract all card information
         cards_match = re.search(r'Cards:(.*?)Dealer:', section, re.DOTALL)
         if cards_match:
             cards_text = cards_match.group(1).strip()
             hands_dict = {}
             
-            # Parse each position's cards
-            positions = ['North', 'East', 'South', 'West']
-            for position in positions:
-                pos_match = re.search(rf'{position}: (.*?)(?=\n\n|$|\n[A-Z])', cards_text, re.DOTALL)
-                if pos_match:
-                    card_text = pos_match.group(1).strip()
-                    hands_dict[position.lower()] = card_text
-                    print(f"Found {position} cards: {card_text[:20]}...")
-                else:
-                    print(f"No {position} cards found")
+            # Extract each position's cards
+            north_match = re.search(r'North:(.*?)(?=East:|$)', cards_text, re.DOTALL)
+            east_match = re.search(r'East:(.*?)(?=South:|$)', cards_text, re.DOTALL)
+            south_match = re.search(r'South:(.*?)(?=West:|$)', cards_text, re.DOTALL)
+            west_match = re.search(r'West:(.*?)(?=$)', cards_text, re.DOTALL)
+            
+            if north_match:
+                hands_dict['north'] = north_match.group(1).strip()
+            if east_match:
+                hands_dict['east'] = east_match.group(1).strip()
+            if south_match:
+                hands_dict['south'] = south_match.group(1).strip()
+            if west_match:
+                hands_dict['west'] = west_match.group(1).strip()
             
             hand_data['cards'] = hands_dict
         else:
