@@ -48,85 +48,65 @@ def health_check():
 def quiz(post_id):
     # Check if quiz data is provided in the request
     if request.method == 'POST' and request.json and 'quiz_data' in request.json:
-        # Parse the quiz data from the request
-        quiz_data = parse_quiz_data(request.json['quiz_data'])
-        
-        # Ensure we have at least one hand
-        if not quiz_data["hands"]:
+        try:
+            # Parse the quiz data from the request
+            quiz_data = parse_quiz_data(request.json['quiz_data'])
+            
+            # Ensure we have at least one hand
+            if not quiz_data["hands"]:
+                return jsonify({
+                    "status": "error",
+                    "message": "No valid quiz hands found in the provided data"
+                }), 400
+                
+            return jsonify({
+                "status": "success",
+                "post_id": post_id,
+                "hands": quiz_data["hands"]
+            })
+        except Exception as e:
+            # Log the error for debugging
+            print(f"Error parsing quiz data: {str(e)}")
             return jsonify({
                 "status": "error",
-                "message": "No valid quiz hands found in the provided data"
+                "message": f"Failed to parse quiz data: {str(e)}",
+                "data_preview": request.json['quiz_data'][:100] + "..." if len(request.json['quiz_data']) > 100 else request.json['quiz_data']
             }), 400
-            
-        return jsonify({
-            "status": "success",
-            "post_id": post_id,
-            "hands": quiz_data["hands"]
-        })
     else:
-        # For GET requests, return a simple example
-        return jsonify({
-            "status": "success",
-            "post_id": post_id,
-            "hands": [
-                {
-                    "number": 1,
-                    "cards": {
-                        "north": "AJT84 KT53 94 AJ",
-                        "east": "76 762 K63 KQ963",
-                        "south": "9532 4 AQJ5 T842",
-                        "west": "KQ AQJ98 T872 75"
-                    },
-                    "dealer": "North",
-                    "bidding": ["North: 1♠", "East: 2♥", "South: ?"],
-                    "question": {
-                        "text": "Does South bid a) 2S or b) 3S",
-                        "options": ["2S", "3S"]
-                    },
-                    "solution": {
-                        "text": "South bids b) 3S. ADD in your shortage points when you hold 4 card support for partner's 5 card suit.",
-                        "correct_answer": "b)"
-                    }
-                }
-            ]
-        })
-
-    # Check if quiz data is provided in the request
-    if request.method == 'POST' and request.json and 'quiz_data' in request.json:
-        # Parse the quiz data from the request
-        quiz_data = parse_quiz_data(request.json['quiz_data'])
-        return jsonify({
-            "status": "success",
-            "post_id": post_id,
-            "hands": quiz_data["hands"]
-        })
-    else:
-        # For GET requests or when no data is provided, return a message
+        # For GET requests or when no data is provided, return an error
         return jsonify({
             "status": "error",
             "message": "Please provide quiz data in POST request",
-            "example": {
-                "quiz_data": "Hand 1:\n\nCards:\nNorth: AJT84\nKT53\n94\nAJ\n\nEast: 76\n762\nK63\nKQ963\n\nSouth: 9532\n4\nAQJ5\nT842\n\nWest: KQ\nAQJ98\nT872\n75\n\nDealer: North\n\nBidding:\nNorth: 1♠\nEast: 2♥\nSouth: ?\n\nQuestion:\nDoes South bid a) 2S or b) 3S\n\nSolution:\nSouth bids b) 3S. ADD in your shortage points when you hold 4 card support for partner's 5 card suit."
-            }
-        })
+            "required_format": "Hand 1:\n\nCards:\nNorth: [cards]\nEast: [cards]\nSouth: [cards]\nWest: [cards]\n\nDealer: [position]\n\nBidding:\n[bidding lines]\n\nQuestion:\n[question text]\n\nSolution:\n[solution text]"
+        }), 400
 
 def parse_quiz_data(content):
     """Parse the bridge quiz data from text format into structured JSON"""
     hands = []
     
+    # Print first 100 characters for debugging
+    print(f"Parsing quiz data: {content[:100]}...")
+    
     # Split content by the separator
     sections = content.split("----------------------------------------")
     
-    for section in sections:
+    print(f"Found {len(sections)} sections")
+    
+    for i, section in enumerate(sections):
         if "Hand" not in section:
             continue
             
+        print(f"Processing section {i+1}")
         hand_data = {}
         
         # Extract hand number
         hand_match = re.search(r'Hand (\d+):', section)
         if hand_match:
             hand_data['number'] = int(hand_match.group(1))
+            print(f"Found hand number: {hand_data['number']}")
+        else:
+            print(f"No hand number found in section {i+1}")
+            continue
         
         # Extract cards
         cards_match = re.search(r'Cards:(.*?)Dealer:', section, re.DOTALL)
@@ -141,13 +121,21 @@ def parse_quiz_data(content):
                 if pos_match:
                     card_text = pos_match.group(1).strip()
                     hands_dict[position.lower()] = card_text
+                    print(f"Found {position} cards: {card_text[:20]}...")
+                else:
+                    print(f"No {position} cards found")
             
             hand_data['cards'] = hands_dict
+        else:
+            print(f"No cards section found in hand {hand_data.get('number', i+1)}")
         
         # Extract dealer
         dealer_match = re.search(r'Dealer: (.*?)(?=\n\n|$|\nBidding)', section, re.DOTALL)
         if dealer_match:
             hand_data['dealer'] = dealer_match.group(1).strip()
+            print(f"Found dealer: {hand_data['dealer']}")
+        else:
+            print(f"No dealer found in hand {hand_data.get('number', i+1)}")
         
         # Extract bidding
         bidding_match = re.search(r'Bidding:(.*?)Question:', section, re.DOTALL)
@@ -155,11 +143,15 @@ def parse_quiz_data(content):
             bidding_text = bidding_match.group(1).strip()
             bidding_lines = [line.strip() for line in bidding_text.split('\n') if line.strip()]
             hand_data['bidding'] = bidding_lines
+            print(f"Found {len(bidding_lines)} bidding lines")
+        else:
+            print(f"No bidding found in hand {hand_data.get('number', i+1)}")
         
         # Extract question
         question_match = re.search(r'Question:(.*?)Solution:', section, re.DOTALL)
         if question_match:
             question_text = question_match.group(1).strip()
+            print(f"Found question: {question_text[:30]}...")
             
             # Extract options from question text
             options = []
@@ -168,28 +160,44 @@ def parse_quiz_data(content):
                 for i in range(1, 5):
                     if i <= options_match.lastindex and options_match.group(i):
                         options.append(options_match.group(i).strip())
+                print(f"Found {len(options)} options")
+            else:
+                print("No options found in question")
             
             hand_data['question'] = {
                 'text': question_text,
                 'options': options
             }
+        else:
+            print(f"No question found in hand {hand_data.get('number', i+1)}")
         
         # Extract solution
         solution_match = re.search(r'Solution:(.*?)$', section, re.DOTALL)
         if solution_match:
             solution_text = solution_match.group(1).strip()
+            print(f"Found solution: {solution_text[:30]}...")
             
             # Extract correct answer
             correct_match = re.search(r'([a-d]\))', solution_text)
             correct_answer = correct_match.group(1) if correct_match else None
+            print(f"Correct answer: {correct_answer}")
             
             hand_data['solution'] = {
                 'text': solution_text,
                 'correct_answer': correct_answer
             }
+        else:
+            print(f"No solution found in hand {hand_data.get('number', i+1)}")
         
-        hands.append(hand_data)
+        # Only add hands that have all required components
+        if all(key in hand_data for key in ['number', 'cards', 'dealer', 'bidding', 'question', 'solution']):
+            hands.append(hand_data)
+            print(f"Added hand {hand_data['number']} to results")
+        else:
+            missing = [key for key in ['number', 'cards', 'dealer', 'bidding', 'question', 'solution'] if key not in hand_data]
+            print(f"Skipping hand {hand_data.get('number', i+1)} due to missing: {', '.join(missing)}")
     
+    print(f"Returning {len(hands)} parsed hands")
     return {"hands": hands}
 
 @app.route('/api/leaderboard/<post_id>')
