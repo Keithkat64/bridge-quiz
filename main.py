@@ -50,6 +50,51 @@ def quiz(post_id):
     if request.method == 'POST' and request.json and 'quiz_data' in request.json:
         # Parse the quiz data from the request
         quiz_data = parse_quiz_data(request.json['quiz_data'])
+        
+        # Ensure we have at least one hand
+        if not quiz_data["hands"]:
+            return jsonify({
+                "status": "error",
+                "message": "No valid quiz hands found in the provided data"
+            }), 400
+            
+        return jsonify({
+            "status": "success",
+            "post_id": post_id,
+            "hands": quiz_data["hands"]
+        })
+    else:
+        # For GET requests, return a simple example
+        return jsonify({
+            "status": "success",
+            "post_id": post_id,
+            "hands": [
+                {
+                    "number": 1,
+                    "cards": {
+                        "north": "AJT84 KT53 94 AJ",
+                        "east": "76 762 K63 KQ963",
+                        "south": "9532 4 AQJ5 T842",
+                        "west": "KQ AQJ98 T872 75"
+                    },
+                    "dealer": "North",
+                    "bidding": ["North: 1♠", "East: 2♥", "South: ?"],
+                    "question": {
+                        "text": "Does South bid a) 2S or b) 3S",
+                        "options": ["2S", "3S"]
+                    },
+                    "solution": {
+                        "text": "South bids b) 3S. ADD in your shortage points when you hold 4 card support for partner's 5 card suit.",
+                        "correct_answer": "b)"
+                    }
+                }
+            ]
+        })
+
+    # Check if quiz data is provided in the request
+    if request.method == 'POST' and request.json and 'quiz_data' in request.json:
+        # Parse the quiz data from the request
+        quiz_data = parse_quiz_data(request.json['quiz_data'])
         return jsonify({
             "status": "success",
             "post_id": post_id,
