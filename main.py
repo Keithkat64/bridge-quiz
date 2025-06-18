@@ -1,7 +1,10 @@
-import os
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify
+from flask_cors import CORS
 
 app = Flask(__name__)
+
+# Configure CORS to allow requests from your domain
+CORS(app, resources={r"/api/*": {"origins": ["https://www.kattery.net", "http://www.kattery.net"]}})
 
 @app.route('/')
 def index():
