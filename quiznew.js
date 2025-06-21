@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Quiz script loaded v2.0.1 - FIXED VERSION');
+    console.log('Quiz script loaded v2.0.2');
     
     // Quiz state
     let quizData = null;
@@ -23,36 +23,59 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Found modules:', modules);
     
     // Check if modules exist
-    if (!modules.registration || !modules.questionbox || !modules.correctBox || 
-        !modules.wrongBox || !modules.leaderboard) {
-        console.error('One or more quiz modules not found');
+    if (!modules.registration) {
+        console.error('Registration module not found');
         return;
     }
     
     // Find form elements
-    const firstNameInput = modules.registration.querySelector('input[name="firstName"]');
-    const lastNameInput = modules.registration.querySelector('input[name="lastName"]');
+    const firstNameInput = modules.registration.querySelector('input[type="text"]:nth-of-type(1)');
+    const lastNameInput = modules.registration.querySelector('input[type="text"]:nth-of-type(2)');
     const startQuizButton = modules.registration.querySelector('button');
     
-    // Find question elements
-    const questionNumberElement = modules.questionbox.querySelector('h2, h3, h4, h5, h6');
-    const questionHandElement = modules.questionbox.querySelector('div:contains("South holds")');
-    const biddingBoxElement = modules.questionbox.querySelector('div:contains("West")');
-    const optionAElement = modules.questionbox.querySelector('div:contains("option a")');
-    const optionBElement = modules.questionbox.querySelector('div:contains("option b")');
-    const optionCElement = modules.questionbox.querySelector('div:contains("option c")');
-    const seeAnswerButton = modules.questionbox.querySelector('button');
+    if (!firstNameInput || !lastNameInput || !startQuizButton) {
+        console.error('Registration form elements not found');
+        console.log('firstNameInput:', firstNameInput);
+        console.log('lastNameInput:', lastNameInput);
+        console.log('startQuizButton:', startQuizButton);
+        return;
+    }
     
-    // Find answer elements
-    const solutionTextCorrect = modules.correctBox.querySelector('div:contains("solution")');
-    const nextQuestionButtonCorrect = modules.correctBox.querySelector('button');
+    // Find question elements if questionbox exists
+    let questionNumberElement, questionHandElement, biddingBoxElement, 
+        optionAElement, optionBElement, optionCElement, seeAnswerButton;
     
-    const solutionTextIncorrect = modules.wrongBox.querySelector('div:contains("solution")');
-    const nextQuestionButtonIncorrect = modules.wrongBox.querySelector('button');
+    if (modules.questionbox) {
+        questionNumberElement = modules.questionbox.querySelector('h2, h3, h4, h5, h6');
+        questionHandElement = modules.questionbox.querySelector('div:contains("South holds")');
+        biddingBoxElement = modules.questionbox.querySelector('div:contains("West")');
+        optionAElement = modules.questionbox.querySelector('div:contains("option a")');
+        optionBElement = modules.questionbox.querySelector('div:contains("option b")');
+        optionCElement = modules.questionbox.querySelector('div:contains("option c")');
+        seeAnswerButton = modules.questionbox.querySelector('button');
+    }
     
-    // Find leaderboard elements
-    const leaderboardTable = modules.leaderboard.querySelector('table');
-    const finishQuizButton = modules.leaderboard.querySelector('button');
+    // Find answer elements if answer modules exist
+    let solutionTextCorrect, nextQuestionButtonCorrect, 
+        solutionTextIncorrect, nextQuestionButtonIncorrect;
+    
+    if (modules.correctBox) {
+        solutionTextCorrect = modules.correctBox.querySelector('div:contains("solution")');
+        nextQuestionButtonCorrect = modules.correctBox.querySelector('button');
+    }
+    
+    if (modules.wrongBox) {
+        solutionTextIncorrect = modules.wrongBox.querySelector('div:contains("solution")');
+        nextQuestionButtonIncorrect = modules.wrongBox.querySelector('button');
+    }
+    
+    // Find leaderboard elements if leaderboard exists
+    let leaderboardTable, finishQuizButton;
+    
+    if (modules.leaderboard) {
+        leaderboardTable = modules.leaderboard.querySelector('table');
+        finishQuizButton = modules.leaderboard.querySelector('button');
+    }
     
     // Get quiz data from hidden input
     const quizDataInput = document.getElementById('quiz-data');
@@ -71,17 +94,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Hide all modules except registration
         hideAllModules();
-        modules.registration.style.display = 'block';
-        
-        // Add event listeners to name inputs
-        if (firstNameInput && lastNameInput) {
-            firstNameInput.addEventListener('input', checkNameInputs);
-            lastNameInput.addEventListener('input', checkNameInputs);
-            
-            // Initially disable start button
-            if (startQuizButton) {
-                startQuizButton.disabled = true;
-            }
+        if (modules.registration) {
+            modules.registration.style.display = 'block';
         }
         
         // Add event listener to start quiz button
@@ -111,15 +125,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add event listener to finish quiz button
         if (finishQuizButton) {
             finishQuizButton.addEventListener('click', finishQuiz);
-        }
-    }
-    
-    // Check if both first and last name are entered
-    function checkNameInputs() {
-        if (firstNameInput.value.trim() !== '' && lastNameInput.value.trim() !== '') {
-            startQuizButton.disabled = false;
-        } else {
-            startQuizButton.disabled = true;
         }
     }
     
@@ -288,7 +293,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Show question box
-        modules.questionbox.style.display = 'block';
+        if (modules.questionbox) {
+            modules.questionbox.style.display = 'block';
+        }
     }
     
     // Handle option selection
@@ -337,12 +344,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Hide question box
-        modules.questionbox.style.display = 'none';
+        if (modules.questionbox) {
+            modules.questionbox.style.display = 'none';
+        }
         
         // Show appropriate answer module
         if (isCorrect) {
             // Show correct answer module
-            modules.correctBox.style.display = 'block';
+            if (modules.correctBox) {
+                modules.correctBox.style.display = 'block';
+            }
             
             // Update solution text
             if (solutionTextCorrect) {
@@ -361,7 +372,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } else {
             // Show incorrect answer module
-            modules.wrongBox.style.display = 'block';
+            if (modules.wrongBox) {
+                modules.wrongBox.style.display = 'block';
+            }
             
             // Update solution text
             if (solutionTextIncorrect) {
@@ -400,8 +413,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Go to next question
     function nextQuestion() {
         // Hide answer modules
-        modules.correctBox.style.display = 'none';
-        modules.wrongBox.style.display = 'none';
+        if (modules.correctBox) modules.correctBox.style.display = 'none';
+        if (modules.wrongBox) modules.wrongBox.style.display = 'none';
         
         // Increment question index
         currentQuestion++;
@@ -430,7 +443,9 @@ document.addEventListener('DOMContentLoaded', function() {
         updateLeaderboardDisplay();
         
         // Show leaderboard module
-        modules.leaderboard.style.display = 'block';
+        if (modules.leaderboard) {
+            modules.leaderboard.style.display = 'block';
+        }
     }
     
     // Save score to local storage
@@ -501,26 +516,54 @@ document.addEventListener('DOMContentLoaded', function() {
     // Finish quiz and reset
     function finishQuiz() {
         hideAllModules();
-        modules.registration.style.display = 'block';
         
         // Clear inputs
         if (firstNameInput) firstNameInput.value = '';
         if (lastNameInput) lastNameInput.value = '';
         
-        // Disable start button again
+        // Hide start button again
         if (startQuizButton) {
-            startQuizButton.disabled = true;
+            startQuizButton.style.display = 'none';
+        }
+        
+        // Show registration module
+        if (modules.registration) {
+            modules.registration.style.display = 'block';
         }
     }
     
     // Hide all modules
     function hideAllModules() {
-        modules.registration.style.display = 'none';
-        modules.questionbox.style.display = 'none';
-        modules.correctBox.style.display = 'none';
-        modules.wrongBox.style.display = 'none';
-        modules.leaderboard.style.display = 'none';
+        if (modules.registration) modules.registration.style.display = 'none';
+        if (modules.questionbox) modules.questionbox.style.display = 'none';
+        if (modules.correctBox) modules.correctBox.style.display = 'none';
+        if (modules.wrongBox) modules.wrongBox.style.display = 'none';
+        if (modules.leaderboard) modules.leaderboard.style.display = 'none';
     }
+    
+    // Helper function to find elements by text content
+    Element.prototype.querySelector = (function(querySelector) {
+        return function(selector) {
+            try {
+                if (selector.includes(':contains(')) {
+                    const match = selector.match(/(.*):contains\("(.*)"\)(.*)/);
+                    if (match) {
+                        const [_, before, text, after] = match;
+                        const elements = this.querySelectorAll(before + after);
+                        for (let i = 0; i < elements.length; i++) {
+                            if (elements[i].textContent.includes(text)) {
+                                return elements[i];
+                            }
+                        }
+                        return null;
+                    }
+                }
+                return querySelector.call(this, selector);
+            } catch (e) {
+                return querySelector.call(this, selector);
+            }
+        };
+    })(Element.prototype.querySelector);
     
     // Initialize the quiz
     initQuiz();
