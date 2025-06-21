@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Quiz script loaded v1.0.4');
+    console.log('Quiz script loaded v2.0.0 - NEW VERSION');
     
     // Quiz state
     let quizData = null;
