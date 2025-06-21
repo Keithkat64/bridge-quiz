@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Quiz script loaded');
+    
     // Quiz state
     let quizData = null;
     let currentQuestion = 0;
@@ -8,6 +10,15 @@ document.addEventListener('DOMContentLoaded', function() {
         firstName: '',
         lastName: ''
     };
+    
+    // Find the quiz container
+    const quizContainer = document.getElementById('quiz-container');
+    
+    // Check if quiz container exists
+    if (!quizContainer) {
+        console.error('Quiz container not found');
+        return;
+    }
     
     // DOM Elements - Registration
     const quizRegistration = document.querySelector('#quiz-registration');
@@ -43,9 +54,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize the quiz
     function initQuiz() {
+        console.log('Initializing quiz...');
+        
         // Hide all modules except registration
         hideAllModules();
-        quizRegistration.style.display = 'block';
+        if (quizRegistration) {
+            quizRegistration.style.display = 'block';
+        }
         
         // Initially hide the start quiz button
         if (startQuizButton) {
@@ -87,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
             finishQuizButton.addEventListener('click', finishQuiz);
         }
         
-        // Load quiz data from ACF field
+        // Load quiz data from data attribute
         loadQuizData();
     }
     
@@ -102,6 +117,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Parse the text format quiz data
     function parseQuizData(rawData) {
+        console.log('Parsing quiz data...');
         const hands = [];
         const handSections = rawData.split('----------------------------------------');
         
@@ -118,19 +134,30 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Extract cards
             hand.allHands = {};
-            const northMatch = section.match(/North: ([^\n]+)/);
-            const eastMatch = section.match(/East: ([^\n]+)/);
-            const southMatch = section.match(/South: ([^\n]+)/);
-            const westMatch = section.match(/West: ([^\n]+)/);
             
-            if (northMatch) hand.allHands.north = formatHand(northMatch[1]);
-            if (eastMatch) hand.allHands.east = formatHand(eastMatch[1]);
-            if (southMatch) hand.allHands.south = formatHand(southMatch[1]);
-            if (westMatch) hand.allHands.west = formatHand(westMatch[1]);
+            const cardsSection = section.match(/Cards:([^Dealer]+)/s);
+            if (cardsSection) {
+                const cardLines = cardsSection[1].trim().split('\n');
+                let currentPosition = '';
+                
+                cardLines.forEach(line => {
+                    const positionMatch = line.match(/(North|East|South|West):(.*)/);
+                    if (positionMatch) {
+                        currentPosition = positionMatch[1].toLowerCase();
+                        const cardData = positionMatch[2].trim();
+                        
+                        // Format the hand with suit symbols
+                        const cards = cardData.split(/\s+/);
+                        if (cards.length >= 4) {
+                            hand.allHands[currentPosition] = `♠ ${cards[0]}\n♥ ${cards[1]}\n♦ ${cards[2]}\n♣ ${cards[3]}`;
+                        }
+                    }
+                });
+            }
             
             // Extract bidding
             hand.bidding = [];
-            const biddingSection = section.match(/Bidding:([^Q]+)/s);
+            const biddingSection = section.match(/Bidding:([^Question]+)/s);
             if (biddingSection) {
                 const biddingLines = biddingSection[1].trim().split('\n');
                 biddingLines.forEach(line => {
@@ -141,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Extract question
-            const questionMatch = section.match(/Question:([^S]+)/s);
+            const questionMatch = section.match(/Question:([^Solution]+)/s);
             if (questionMatch) {
                 hand.question = questionMatch[1].trim();
                 
@@ -152,12 +179,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     const optionsText = optionsMatch[1];
                     
                     // Extract individual options
-                    const optionMatches = optionsText.match(/([a-d])\) ([^or\n]+)/g);
-                    if (optionMatches) {
-                        optionMatches.forEach(optionText => {
-                            const [_, letter, text] = optionText.match(/([a-d])\) ([^or\n]+)/);
-                            hand.options[letter] = text.trim();
-                        });
+                    const optionRegex = /([a-d])\) ([^a-d\)]+)/g;
+                    let optionMatch;
+                    
+                    while ((optionMatch = optionRegex.exec(optionsText)) !== null) {
+                        const letter = optionMatch[1];
+                        const text = optionMatch[2].trim();
+                        hand.options[letter] = text;
                     }
                 }
             }
@@ -177,49 +205,23 @@ document.addEventListener('DOMContentLoaded', function() {
             hands.push(hand);
         });
         
+        console.log('Parsed hands:', hands);
         return hands;
     }
     
-    // Format hand text with suit symbols
-    function formatHand(handText) {
-        // Split the hand text into lines if it contains line breaks
-        const lines = handText.split('\n');
-        
-        if (lines.length > 1) {
-            // Already formatted with multiple lines
-            return handText;
-        } else {
-            // Format as a bridge hand with suit symbols
-            const parts = handText.match(/([AKQJT0-9]+)\s*([AKQJT0-9]+)\s*([AKQJT0-9]+)\s*([AKQJT0-9]+)/);
-            
-            if (parts) {
-                return `♠ ${parts[1]}\n♥ ${parts[2]}\n♦ ${parts[3]}\n♣ ${parts[4]}`;
-            } else {
-                return handText;
-            }
-        }
-    }
-    
-    // Load quiz data from ACF field
+    // Load quiz data from data attribute
     function loadQuizData() {
         try {
-            // Get the quiz data from the ACF field
-            let rawData = '';
+            // Get the quiz data from the data attribute
+            const quizDataElement = document.getElementById('quiz-data');
             
-            // Try to get data from ACF field
-            if (typeof acf !== 'undefined' && acf.fields && acf.fields.data) {
-                rawData = acf.fields.data;
-            } else if (document.getElementById('quiz-data')) {
-                // Fallback to data attribute if available
-                rawData = document.getElementById('quiz-data').getAttribute('data-quiz');
+            if (quizDataElement && quizDataElement.getAttribute('value')) {
+                const rawData = quizDataElement.getAttribute('value');
+                quizData = parseQuizData(rawData);
+                console.log('Quiz data loaded successfully');
             } else {
-                console.error('Quiz data not found');
-                return;
+                console.error('Quiz data element or value not found');
             }
-            
-            // Parse the raw text data
-            quizData = parseQuizData(rawData);
-            console.log('Parsed quiz data:', quizData);
         } catch (error) {
             console.error('Error loading quiz data:', error);
         }
@@ -269,26 +271,32 @@ document.addEventListener('DOMContentLoaded', function() {
         if (optionAElement && question.options && question.options.a) {
             optionAElement.textContent = question.options.a;
             optionAElement.setAttribute('data-option', 'a');
+            optionAElement.style.display = 'block';
         }
         
         if (optionBElement && question.options && question.options.b) {
             optionBElement.textContent = question.options.b;
             optionBElement.setAttribute('data-option', 'b');
+            optionBElement.style.display = 'block';
         }
         
-        if (optionCElement && question.options && question.options.c) {
-            optionCElement.style.display = question.options.c ? 'block' : 'none';
-            if (question.options.c) {
+        if (optionCElement) {
+            if (question.options && question.options.c) {
                 optionCElement.textContent = question.options.c;
                 optionCElement.setAttribute('data-option', 'c');
+                optionCElement.style.display = 'block';
+            } else {
+                optionCElement.style.display = 'none';
             }
         }
         
-        if (optionDElement && question.options && question.options.d) {
-            optionDElement.style.display = question.options.d ? 'block' : 'none';
-            if (question.options.d) {
+        if (optionDElement) {
+            if (question.options && question.options.d) {
                 optionDElement.textContent = question.options.d;
                 optionDElement.setAttribute('data-option', 'd');
+                optionDElement.style.display = 'block';
+            } else {
+                optionDElement.style.display = 'none';
             }
         }
         
@@ -303,7 +311,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Show question box
-        questionBox.style.display = 'block';
+        if (questionBox) {
+            questionBox.style.display = 'block';
+        }
     }
     
     // Handle option selection
@@ -352,12 +362,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Hide question box
-        questionBox.style.display = 'none';
+        if (questionBox) {
+            questionBox.style.display = 'none';
+        }
         
         // Show appropriate answer module
         if (isCorrect) {
             // Show correct answer module
-            correctAnswerModule.style.display = 'block';
+            if (correctAnswerModule) {
+                correctAnswerModule.style.display = 'block';
+            }
             
             // Update solution text
             if (solutionTextCorrect) {
@@ -370,7 +384,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } else {
             // Show wrong answer module
-            wrongAnswerModule.style.display = 'block';
+            if (wrongAnswerModule) {
+                wrongAnswerModule.style.display = 'block';
+            }
             
             // Update solution text
             if (solutionTextError) {
@@ -403,8 +419,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Go to next question
     function nextQuestion() {
         // Hide answer modules
-        correctAnswerModule.style.display = 'none';
-        wrongAnswerModule.style.display = 'none';
+        if (correctAnswerModule) correctAnswerModule.style.display = 'none';
+        if (wrongAnswerModule) wrongAnswerModule.style.display = 'none';
         
         // Increment question index
         currentQuestion++;
@@ -433,7 +449,9 @@ document.addEventListener('DOMContentLoaded', function() {
         updateLeaderboardDisplay();
         
         // Show leaderboard module
-        leaderboardModule.style.display = 'block';
+        if (leaderboardModule) {
+            leaderboardModule.style.display = 'block';
+        }
     }
     
     // Save score to local storage
@@ -494,7 +512,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Finish quiz and reset
     function finishQuiz() {
         hideAllModules();
-        quizRegistration.style.display = 'block';
+        if (quizRegistration) {
+            quizRegistration.style.display = 'block';
+        }
         
         // Clear inputs
         if (firstNameInput) firstNameInput.value = '';
@@ -508,11 +528,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Hide all modules
     function hideAllModules() {
-        quizRegistration.style.display = 'none';
-        questionBox.style.display = 'none';
-        correctAnswerModule.style.display = 'none';
-        wrongAnswerModule.style.display = 'none';
-        leaderboardModule.style.display = 'none';
+        if (quizRegistration) quizRegistration.style.display = 'none';
+        if (questionBox) questionBox.style.display = 'none';
+        if (correctAnswerModule) correctAnswerModule.style.display = 'none';
+        if (wrongAnswerModule) wrongAnswerModule.style.display = 'none';
+        if (leaderboardModule) leaderboardModule.style.display = 'none';
     }
     
     // Initialize the quiz when the page loads
