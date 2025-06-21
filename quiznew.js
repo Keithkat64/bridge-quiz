@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Quiz script loaded v2.0.2');
+    console.log('Quiz script loaded v2.0.3');
     
     // Quiz state
     let quizData = null;
@@ -31,13 +31,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Find form elements
     const firstNameInput = modules.registration.querySelector('input[type="text"]:nth-of-type(1)');
     const lastNameInput = modules.registration.querySelector('input[type="text"]:nth-of-type(2)');
-    const startQuizButton = modules.registration.querySelector('button');
+    const startQuizButton = document.getElementById('startquizbtn');
+    
+    console.log('Form elements:', {
+        firstNameInput: firstNameInput,
+        lastNameInput: lastNameInput,
+        startQuizButton: startQuizButton
+    });
     
     if (!firstNameInput || !lastNameInput || !startQuizButton) {
         console.error('Registration form elements not found');
-        console.log('firstNameInput:', firstNameInput);
-        console.log('lastNameInput:', lastNameInput);
-        console.log('startQuizButton:', startQuizButton);
         return;
     }
     
@@ -226,6 +229,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Save user info
         userInfo.firstName = firstNameInput.value.trim();
         userInfo.lastName = lastNameInput.value.trim();
+        
+        console.log('Starting quiz for:', userInfo.firstName, userInfo.lastName);
         
         // Reset quiz state
         currentQuestion = 0;
