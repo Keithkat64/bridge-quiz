@@ -1,8 +1,70 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Quiz script loaded');
+    console.log('Quiz script loaded v1.0.3');
+    
+    // Find the Quiz container
+    const quizContainer = findContainerByText('Quiz');
+    
+    if (!quizContainer) {
+        console.error('Quiz container not found');
+        return;
+    }
+    
+    console.log('Found Quiz container:', quizContainer);
+    
+    // Find all modules inside the Quiz container
+    const quizRegistration = findModuleByText(quizContainer, 'Quiz Registration');
+    const questionBox = findModuleByText(quizContainer, 'Question');
+    const correctAnswerModule = findModuleByText(quizContainer, 'Correct');
+    const wrongAnswerModule = findModuleByText(quizContainer, 'Nearly right');
+    const leaderboardModule = findModuleByText(quizContainer, 'Leaderboard');
+    
+    console.log('Found modules:', {
+        quizRegistration,
+        questionBox,
+        correctAnswerModule,
+        wrongAnswerModule,
+        leaderboardModule
+    });
+    
+    // Find form elements
+    const firstNameInput = quizRegistration.querySelector('input[type="text"]:first-of-type');
+    const lastNameInput = quizRegistration.querySelector('input[type="text"]:last-of-type');
+    const startQuizButton = quizRegistration.querySelector('button');
+    
+    // Find question elements
+    const questionNumberElement = questionBox.querySelector('h2, h3, h4');
+    const questionHandElement = questionBox.querySelector('div:not(:has(button))');
+    const biddingBoxElement = questionBox.querySelector('div:not(:has(button)):nth-of-type(2)');
+    const optionAElement = questionBox.querySelector('div[id*="option-a"], div:contains("A")');
+    const optionBElement = questionBox.querySelector('div[id*="option-b"], div:contains("B")');
+    const optionCElement = questionBox.querySelector('div[id*="option-c"], div:contains("C")');
+    const seeAnswerButton = questionBox.querySelector('button');
+    
+    // Find answer elements
+    const solutionTextCorrect = correctAnswerModule.querySelector('div:not(:has(button))');
+    const diamondHandCorrect = correctAnswerModule.querySelector('div:empty');
+    const nextQuestionButtonCorrect = correctAnswerModule.querySelector('button');
+    
+    const solutionTextError = wrongAnswerModule.querySelector('div:not(:has(button))');
+    const diamondHandError = wrongAnswerModule.querySelector('div:empty');
+    const nextQuestionButtonWrong = wrongAnswerModule.querySelector('button');
+    
+    // Find leaderboard elements
+    const leaderboardTable = leaderboardModule.querySelector('table');
+    const finishQuizButton = leaderboardModule.querySelector('button');
+    
+    // Get quiz data from hidden input
+    const quizDataInput = document.getElementById('quiz-data');
+    let quizData = [];
+    
+    if (quizDataInput) {
+        quizData = parseQuizData(quizDataInput.value);
+        console.log('Quiz data loaded:', quizData);
+    } else {
+        console.error('Quiz data input not found');
+    }
     
     // Quiz state
-    let quizData = null;
     let currentQuestion = 0;
     let userScore = 0;
     let userAnswers = [];
@@ -10,47 +72,6 @@ document.addEventListener('DOMContentLoaded', function() {
         firstName: '',
         lastName: ''
     };
-    
-    // Find the quiz container
-    const quizContainer = document.getElementById('quiz-container');
-    
-    // Check if quiz container exists
-    if (!quizContainer) {
-        console.error('Quiz container not found');
-        return;
-    }
-    
-    // DOM Elements - Registration
-    const quizRegistration = document.querySelector('#quiz-registration');
-    const firstNameInput = document.querySelector('#firstName');
-    const lastNameInput = document.querySelector('#lastName');
-    const startQuizButton = document.querySelector('#start-quiz');
-    
-    // DOM Elements - Question Box
-    const questionBox = document.querySelector('#QuestionBox');
-    const questionNumberElement = document.querySelector('#question-number');
-    const questionHandElement = document.querySelector('#questionhand');
-    const biddingBoxElement = document.querySelector('#Biddingbox');
-    const optionAElement = document.querySelector('#option-a');
-    const optionBElement = document.querySelector('#option-b');
-    const optionCElement = document.querySelector('#option-c');
-    const optionDElement = document.querySelector('#option-d'); // In case there's a D option
-    const seeAnswerButton = document.querySelector('#see-answer');
-    
-    // DOM Elements - Answer Modules
-    const correctAnswerModule = document.querySelector('#CorrectAnswer');
-    const wrongAnswerModule = document.querySelector('#WrongAnswer');
-    const solutionTextCorrect = document.querySelector('#SolutionTextCorrect');
-    const solutionTextError = document.querySelector('#SolutionTextError');
-    const diamondHandCorrect = document.querySelector('#DiamondhandCorrect');
-    const diamondHandError = document.querySelector('#DiamondhandError');
-    const nextQuestionButtonCorrect = document.querySelector('#next-question-correct');
-    const nextQuestionButtonWrong = document.querySelector('#next-question-wrong');
-    
-    // DOM Elements - Leaderboard
-    const leaderboardModule = document.querySelector('#Leaderboard');
-    const leaderboardTable = document.querySelector('#leaderboard-table');
-    const finishQuizButton = document.querySelector('#finish-quiz');
     
     // Initialize the quiz
     function initQuiz() {
@@ -79,9 +100,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Add event listeners to answer options
-        document.querySelectorAll('.quiz-option').forEach(option => {
-            option.addEventListener('click', selectOption);
-        });
+        if (optionAElement) optionAElement.addEventListener('click', () => selectOption(optionAElement));
+        if (optionBElement) optionBElement.addEventListener('click', () => selectOption(optionBElement));
+        if (optionCElement) optionCElement.addEventListener('click', () => selectOption(optionCElement));
         
         // Add event listener to see answer button
         if (seeAnswerButton) {
@@ -101,9 +122,28 @@ document.addEventListener('DOMContentLoaded', function() {
         if (finishQuizButton) {
             finishQuizButton.addEventListener('click', finishQuiz);
         }
-        
-        // Load quiz data from data attribute
-        loadQuizData();
+    }
+    
+    // Helper function to find container by text content
+    function findContainerByText(text) {
+        const elements = document.querySelectorAll('div, section');
+        for (const element of elements) {
+            if (element.textContent.includes(text) && !element.querySelector('div, section')) {
+                return element.parentElement;
+            }
+        }
+        return null;
+    }
+    
+    // Helper function to find module by text content within container
+    function findModuleByText(container, text) {
+        const elements = container.querySelectorAll('div, section');
+        for (const element of elements) {
+            if (element.textContent.includes(text)) {
+                return element;
+            }
+        }
+        return null;
     }
     
     // Check if both first and last name are entered
@@ -205,26 +245,7 @@ document.addEventListener('DOMContentLoaded', function() {
             hands.push(hand);
         });
         
-        console.log('Parsed hands:', hands);
         return hands;
-    }
-    
-    // Load quiz data from data attribute
-    function loadQuizData() {
-        try {
-            // Get the quiz data from the data attribute
-            const quizDataElement = document.getElementById('quiz-data');
-            
-            if (quizDataElement && quizDataElement.getAttribute('value')) {
-                const rawData = quizDataElement.getAttribute('value');
-                quizData = parseQuizData(rawData);
-                console.log('Quiz data loaded successfully');
-            } else {
-                console.error('Quiz data element or value not found');
-            }
-        } catch (error) {
-            console.error('Error loading quiz data:', error);
-        }
     }
     
     // Start the quiz
@@ -290,20 +311,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        if (optionDElement) {
-            if (question.options && question.options.d) {
-                optionDElement.textContent = question.options.d;
-                optionDElement.setAttribute('data-option', 'd');
-                optionDElement.style.display = 'block';
-            } else {
-                optionDElement.style.display = 'none';
-            }
-        }
-        
         // Reset option selection
-        document.querySelectorAll('.quiz-option').forEach(option => {
-            option.classList.remove('selected');
-        });
+        if (optionAElement) optionAElement.classList.remove('selected');
+        if (optionBElement) optionBElement.classList.remove('selected');
+        if (optionCElement) optionCElement.classList.remove('selected');
         
         // Disable see answer button until an option is selected
         if (seeAnswerButton) {
@@ -317,14 +328,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Handle option selection
-    function selectOption(event) {
+    function selectOption(optionElement) {
         // Remove selected class from all options
-        document.querySelectorAll('.quiz-option').forEach(option => {
-            option.classList.remove('selected');
-        });
+        if (optionAElement) optionAElement.classList.remove('selected');
+        if (optionBElement) optionBElement.classList.remove('selected');
+        if (optionCElement) optionCElement.classList.remove('selected');
         
         // Add selected class to clicked option
-        event.currentTarget.classList.add('selected');
+        optionElement.classList.add('selected');
         
         // Enable see answer button
         if (seeAnswerButton) {
@@ -335,7 +346,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Show answer based on selected option
     function showAnswer() {
         // Get selected option
-        const selectedOption = document.querySelector('.quiz-option.selected');
+        const selectedOption = questionBox.querySelector('.selected');
         if (!selectedOption) {
             return;
         }
@@ -535,6 +546,52 @@ document.addEventListener('DOMContentLoaded', function() {
         if (leaderboardModule) leaderboardModule.style.display = 'none';
     }
     
-    // Initialize the quiz when the page loads
+    // Add CSS for diamond hand display
+    const style = document.createElement('style');
+    style.textContent = `
+    .diamond-hand {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 20px 0;
+      font-family: monospace;
+      white-space: pre-line;
+    }
+    
+    .hand-middle {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      margin: 10px 0;
+    }
+    
+    .north, .south, .west, .east {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background-color: #f9f9f9;
+      min-width: 120px;
+    }
+    
+    .north, .south {
+      text-align: center;
+    }
+    
+    .west {
+      margin-right: 40px;
+    }
+    
+    .east {
+      margin-left: 40px;
+    }
+    
+    .selected {
+      background-color: #e0f7fa !important;
+      border-color: #4CAF50 !important;
+    }
+    `;
+    document.head.appendChild(style);
+    
+    // Initialize the quiz
     initQuiz();
 });
