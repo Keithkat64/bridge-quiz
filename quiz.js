@@ -1,70 +1,8 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Quiz script loaded v1.0.3');
-    
-    // Find the Quiz container
-    const quizContainer = findContainerByText('Quiz');
-    
-    if (!quizContainer) {
-        console.error('Quiz container not found');
-        return;
-    }
-    
-    console.log('Found Quiz container:', quizContainer);
-    
-    // Find all modules inside the Quiz container
-    const quizRegistration = findModuleByText(quizContainer, 'Quiz Registration');
-    const questionBox = findModuleByText(quizContainer, 'Question');
-    const correctAnswerModule = findModuleByText(quizContainer, 'Correct');
-    const wrongAnswerModule = findModuleByText(quizContainer, 'Nearly right');
-    const leaderboardModule = findModuleByText(quizContainer, 'Leaderboard');
-    
-    console.log('Found modules:', {
-        quizRegistration,
-        questionBox,
-        correctAnswerModule,
-        wrongAnswerModule,
-        leaderboardModule
-    });
-    
-    // Find form elements
-    const firstNameInput = quizRegistration.querySelector('input[type="text"]:first-of-type');
-    const lastNameInput = quizRegistration.querySelector('input[type="text"]:last-of-type');
-    const startQuizButton = quizRegistration.querySelector('button');
-    
-    // Find question elements
-    const questionNumberElement = questionBox.querySelector('h2, h3, h4');
-    const questionHandElement = questionBox.querySelector('div:not(:has(button))');
-    const biddingBoxElement = questionBox.querySelector('div:not(:has(button)):nth-of-type(2)');
-    const optionAElement = questionBox.querySelector('div[id*="option-a"], div:contains("A")');
-    const optionBElement = questionBox.querySelector('div[id*="option-b"], div:contains("B")');
-    const optionCElement = questionBox.querySelector('div[id*="option-c"], div:contains("C")');
-    const seeAnswerButton = questionBox.querySelector('button');
-    
-    // Find answer elements
-    const solutionTextCorrect = correctAnswerModule.querySelector('div:not(:has(button))');
-    const diamondHandCorrect = correctAnswerModule.querySelector('div:empty');
-    const nextQuestionButtonCorrect = correctAnswerModule.querySelector('button');
-    
-    const solutionTextError = wrongAnswerModule.querySelector('div:not(:has(button))');
-    const diamondHandError = wrongAnswerModule.querySelector('div:empty');
-    const nextQuestionButtonWrong = wrongAnswerModule.querySelector('button');
-    
-    // Find leaderboard elements
-    const leaderboardTable = leaderboardModule.querySelector('table');
-    const finishQuizButton = leaderboardModule.querySelector('button');
-    
-    // Get quiz data from hidden input
-    const quizDataInput = document.getElementById('quiz-data');
-    let quizData = [];
-    
-    if (quizDataInput) {
-        quizData = parseQuizData(quizDataInput.value);
-        console.log('Quiz data loaded:', quizData);
-    } else {
-        console.error('Quiz data input not found');
-    }
+    console.log('Quiz script loaded v1.0.4');
     
     // Quiz state
+    let quizData = null;
     let currentQuestion = 0;
     let userScore = 0;
     let userAnswers = [];
@@ -73,25 +11,85 @@ document.addEventListener('DOMContentLoaded', function() {
         lastName: ''
     };
     
+    // Find all quiz modules
+    const registrationModule = document.querySelector('h2, h3, h4, h5, h6').textContent.includes('Quiz registration') ? 
+        document.querySelector('h2, h3, h4, h5, h6').closest('div, section') : null;
+    
+    const questionModule = document.querySelector('h2, h3, h4, h5, h6').textContent.includes('Question') ? 
+        document.querySelector('h2, h3, h4, h5, h6').closest('div, section') : null;
+    
+    const correctModule = document.querySelector('h2, h3, h4, h5, h6').textContent.includes('✅Correct') ? 
+        document.querySelector('h2, h3, h4, h5, h6').closest('div, section') : null;
+    
+    const incorrectModule = document.querySelector('h2, h3, h4, h5, h6').textContent.includes('❌Incorrect') ? 
+        document.querySelector('h2, h3, h4, h5, h6').closest('div, section') : null;
+    
+    const leaderboardModule = document.querySelector('h2, h3, h4, h5, h6').textContent.includes('🏆 Leaderboard') ? 
+        document.querySelector('h2, h3, h4, h5, h6').closest('div, section') : null;
+    
+    console.log('Found modules:', {
+        registrationModule,
+        questionModule,
+        correctModule,
+        incorrectModule,
+        leaderboardModule
+    });
+    
+    // Find form elements
+    const firstNameInput = registrationModule ? registrationModule.querySelector('input[type="text"]:first-of-type') : null;
+    const lastNameInput = registrationModule ? registrationModule.querySelector('input[type="text"]:last-of-type') : null;
+    const startQuizButton = registrationModule ? registrationModule.querySelector('button') : null;
+    
+    // Find question elements
+    const questionNumberElement = questionModule ? questionModule.querySelector('h2, h3, h4, h5, h6') : null;
+    const questionHandElement = questionModule ? questionModule.querySelector('div:contains("South holds")') : null;
+    const biddingBoxElement = questionModule ? questionModule.querySelector('div:contains("West")') : null;
+    const optionAElement = questionModule ? questionModule.querySelector('div:contains("option a")') : null;
+    const optionBElement = questionModule ? questionModule.querySelector('div:contains("option b")') : null;
+    const optionCElement = questionModule ? questionModule.querySelector('div:contains("option c")') : null;
+    const seeAnswerButton = questionModule ? questionModule.querySelector('button') : null;
+    
+    // Find answer elements
+    const solutionTextCorrect = correctModule ? correctModule.querySelector('div:contains("solution")') : null;
+    const nextQuestionButtonCorrect = correctModule ? correctModule.querySelector('button') : null;
+    
+    const solutionTextIncorrect = incorrectModule ? incorrectModule.querySelector('div:contains("solution")') : null;
+    const nextQuestionButtonIncorrect = incorrectModule ? incorrectModule.querySelector('button') : null;
+    
+    // Find leaderboard elements
+    const leaderboardTable = leaderboardModule ? leaderboardModule.querySelector('table') : null;
+    const finishQuizButton = leaderboardModule ? leaderboardModule.querySelector('button') : null;
+    
+    // Get quiz data from hidden input
+    const quizDataInput = document.getElementById('quiz-data');
+    
     // Initialize the quiz
     function initQuiz() {
         console.log('Initializing quiz...');
         
-        // Hide all modules except registration
-        hideAllModules();
-        if (quizRegistration) {
-            quizRegistration.style.display = 'block';
+        // Load quiz data
+        if (quizDataInput) {
+            quizData = parseQuizData(quizDataInput.value);
+            console.log('Quiz data loaded:', quizData);
+        } else {
+            console.error('Quiz data input not found');
         }
         
-        // Initially hide the start quiz button
-        if (startQuizButton) {
-            startQuizButton.style.display = 'none';
+        // Hide all modules except registration
+        hideAllModules();
+        if (registrationModule) {
+            registrationModule.style.display = 'block';
         }
         
         // Add event listeners to name inputs
         if (firstNameInput && lastNameInput) {
             firstNameInput.addEventListener('input', checkNameInputs);
             lastNameInput.addEventListener('input', checkNameInputs);
+            
+            // Initially disable start button
+            if (startQuizButton) {
+                startQuizButton.disabled = true;
+            }
         }
         
         // Add event listener to start quiz button
@@ -100,9 +98,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Add event listeners to answer options
-        if (optionAElement) optionAElement.addEventListener('click', () => selectOption(optionAElement));
-        if (optionBElement) optionBElement.addEventListener('click', () => selectOption(optionBElement));
-        if (optionCElement) optionCElement.addEventListener('click', () => selectOption(optionCElement));
+        if (optionAElement) optionAElement.addEventListener('click', () => selectOption(optionAElement, 'a'));
+        if (optionBElement) optionBElement.addEventListener('click', () => selectOption(optionBElement, 'b'));
+        if (optionCElement) optionCElement.addEventListener('click', () => selectOption(optionCElement, 'c'));
         
         // Add event listener to see answer button
         if (seeAnswerButton) {
@@ -114,30 +112,22 @@ document.addEventListener('DOMContentLoaded', function() {
         if (nextQuestionButtonCorrect) {
             nextQuestionButtonCorrect.addEventListener('click', nextQuestion);
         }
-        if (nextQuestionButtonWrong) {
-            nextQuestionButtonWrong.addEventListener('click', nextQuestion);
+        if (nextQuestionButtonIncorrect) {
+            nextQuestionButtonIncorrect.addEventListener('click', nextQuestion);
         }
         
         // Add event listener to finish quiz button
         if (finishQuizButton) {
             finishQuizButton.addEventListener('click', finishQuiz);
         }
+        
+        // Add CSS for diamond hand display
+        addDiamondHandCSS();
     }
     
-    // Helper function to find container by text content
-    function findContainerByText(text) {
-        const elements = document.querySelectorAll('div, section');
-        for (const element of elements) {
-            if (element.textContent.includes(text) && !element.querySelector('div, section')) {
-                return element.parentElement;
-            }
-        }
-        return null;
-    }
-    
-    // Helper function to find module by text content within container
-    function findModuleByText(container, text) {
-        const elements = container.querySelectorAll('div, section');
+    // Helper function to find elements by text content
+    function findElementByText(selector, text) {
+        const elements = document.querySelectorAll(selector);
         for (const element of elements) {
             if (element.textContent.includes(text)) {
                 return element;
@@ -149,9 +139,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check if both first and last name are entered
     function checkNameInputs() {
         if (firstNameInput.value.trim() !== '' && lastNameInput.value.trim() !== '') {
-            startQuizButton.style.display = 'block';
+            startQuizButton.disabled = false;
         } else {
-            startQuizButton.style.display = 'none';
+            startQuizButton.disabled = true;
         }
     }
     
@@ -280,7 +270,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update South hand with suit symbols
         if (questionHandElement && question.allHands && question.allHands.south) {
-            questionHandElement.innerHTML = question.allHands.south;
+            questionHandElement.innerHTML = `South holds\n${question.allHands.south}`;
         }
         
         // Update bidding box
@@ -290,31 +280,29 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update options
         if (optionAElement && question.options && question.options.a) {
-            optionAElement.textContent = question.options.a;
+            optionAElement.textContent = `option a) ${question.options.a}`;
             optionAElement.setAttribute('data-option', 'a');
             optionAElement.style.display = 'block';
+            optionAElement.classList.remove('selected');
         }
         
         if (optionBElement && question.options && question.options.b) {
-            optionBElement.textContent = question.options.b;
+            optionBElement.textContent = `option b) ${question.options.b}`;
             optionBElement.setAttribute('data-option', 'b');
             optionBElement.style.display = 'block';
+            optionBElement.classList.remove('selected');
         }
         
         if (optionCElement) {
             if (question.options && question.options.c) {
-                optionCElement.textContent = question.options.c;
+                optionCElement.textContent = `option c) ${question.options.c}`;
                 optionCElement.setAttribute('data-option', 'c');
                 optionCElement.style.display = 'block';
+                optionCElement.classList.remove('selected');
             } else {
                 optionCElement.style.display = 'none';
             }
         }
-        
-        // Reset option selection
-        if (optionAElement) optionAElement.classList.remove('selected');
-        if (optionBElement) optionBElement.classList.remove('selected');
-        if (optionCElement) optionCElement.classList.remove('selected');
         
         // Disable see answer button until an option is selected
         if (seeAnswerButton) {
@@ -322,13 +310,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Show question box
-        if (questionBox) {
-            questionBox.style.display = 'block';
+        if (questionModule) {
+            questionModule.style.display = 'block';
         }
     }
     
     // Handle option selection
-    function selectOption(optionElement) {
+    function selectOption(optionElement, optionValue) {
         // Remove selected class from all options
         if (optionAElement) optionAElement.classList.remove('selected');
         if (optionBElement) optionBElement.classList.remove('selected');
@@ -336,6 +324,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Add selected class to clicked option
         optionElement.classList.add('selected');
+        
+        // Store the selected option
+        selectedOption = optionValue;
         
         // Enable see answer button
         if (seeAnswerButton) {
@@ -346,7 +337,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Show answer based on selected option
     function showAnswer() {
         // Get selected option
-        const selectedOption = questionBox.querySelector('.selected');
+        const selectedOption = questionModule.querySelector('.selected');
         if (!selectedOption) {
             return;
         }
@@ -373,15 +364,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Hide question box
-        if (questionBox) {
-            questionBox.style.display = 'none';
+        if (questionModule) {
+            questionModule.style.display = 'none';
         }
         
         // Show appropriate answer module
         if (isCorrect) {
             // Show correct answer module
-            if (correctAnswerModule) {
-                correctAnswerModule.style.display = 'block';
+            if (correctModule) {
+                correctModule.style.display = 'block';
             }
             
             // Update solution text
@@ -389,24 +380,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 solutionTextCorrect.innerHTML = question.solution;
             }
             
-            // Update diamond hand display
-            if (diamondHandCorrect) {
-                diamondHandCorrect.innerHTML = formatDiamondHand(question.allHands);
+            // Add diamond hand display
+            const diamondHandContainer = correctModule.querySelector('div:empty') || 
+                document.createElement('div');
+            
+            if (diamondHandContainer) {
+                diamondHandContainer.innerHTML = formatDiamondHand(question.allHands);
+                if (!diamondHandContainer.parentNode) {
+                    correctModule.appendChild(diamondHandContainer);
+                }
             }
         } else {
-            // Show wrong answer module
-            if (wrongAnswerModule) {
-                wrongAnswerModule.style.display = 'block';
+            // Show incorrect answer module
+            if (incorrectModule) {
+                incorrectModule.style.display = 'block';
             }
             
             // Update solution text
-            if (solutionTextError) {
-                solutionTextError.innerHTML = question.solution;
+            if (solutionTextIncorrect) {
+                solutionTextIncorrect.innerHTML = question.solution;
             }
             
-            // Update diamond hand display
-            if (diamondHandError) {
-                diamondHandError.innerHTML = formatDiamondHand(question.allHands);
+            // Add diamond hand display
+            const diamondHandContainer = incorrectModule.querySelector('div:empty') || 
+                document.createElement('div');
+            
+            if (diamondHandContainer) {
+                diamondHandContainer.innerHTML = formatDiamondHand(question.allHands);
+                if (!diamondHandContainer.parentNode) {
+                    incorrectModule.appendChild(diamondHandContainer);
+                }
             }
         }
     }
@@ -427,11 +430,59 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
     }
     
+    // Add CSS for diamond hand display
+    function addDiamondHandCSS() {
+        const style = document.createElement('style');
+        style.textContent = `
+        .diamond-hand {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          margin: 20px 0;
+          font-family: monospace;
+          white-space: pre-line;
+        }
+        
+        .hand-middle {
+          display: flex;
+          justify-content: space-between;
+          width: 100%;
+          margin: 10px 0;
+        }
+        
+        .north, .south, .west, .east {
+          padding: 10px;
+          border: 1px solid #ddd;
+          border-radius: 5px;
+          background-color: #f9f9f9;
+          min-width: 120px;
+        }
+        
+        .north, .south {
+          text-align: center;
+        }
+        
+        .west {
+          margin-right: 40px;
+        }
+        
+        .east {
+          margin-left: 40px;
+        }
+        
+        .selected {
+          background-color: #e0f7fa !important;
+          border-color: #4CAF50 !important;
+        }
+        `;
+        document.head.appendChild(style);
+    }
+    
     // Go to next question
     function nextQuestion() {
         // Hide answer modules
-        if (correctAnswerModule) correctAnswerModule.style.display = 'none';
-        if (wrongAnswerModule) wrongAnswerModule.style.display = 'none';
+        if (correctModule) correctModule.style.display = 'none';
+        if (incorrectModule) incorrectModule.style.display = 'none';
         
         // Increment question index
         currentQuestion++;
@@ -497,13 +548,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const scores = JSON.parse(localStorage.getItem('quizScores') || '[]');
         
         // Create table rows
-        let tableHTML = `
-            <tr>
-                <th>Rank</th>
-                <th>Name</th>
-                <th>Score</th>
-            </tr>
-        `;
+        let tableHTML = '';
         
         // Add score rows
         scores.forEach((score, index) => {
@@ -516,81 +561,51 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         });
         
-        // Update table
-        leaderboardTable.innerHTML = tableHTML;
+        // Fill remaining rows if needed
+        for (let i = scores.length; i < 10; i++) {
+            tableHTML += `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            `;
+        }
+        
+        // Update table body
+        const tableBody = leaderboardTable.querySelector('tbody');
+        if (tableBody) {
+            tableBody.innerHTML = tableHTML;
+        } else {
+            leaderboardTable.innerHTML = tableHTML;
+        }
     }
     
     // Finish quiz and reset
     function finishQuiz() {
         hideAllModules();
-        if (quizRegistration) {
-            quizRegistration.style.display = 'block';
+        if (registrationModule) {
+            registrationModule.style.display = 'block';
         }
         
         // Clear inputs
         if (firstNameInput) firstNameInput.value = '';
         if (lastNameInput) lastNameInput.value = '';
         
-        // Hide start button again
+        // Disable start button again
         if (startQuizButton) {
-            startQuizButton.style.display = 'none';
+            startQuizButton.disabled = true;
         }
     }
     
     // Hide all modules
     function hideAllModules() {
-        if (quizRegistration) quizRegistration.style.display = 'none';
-        if (questionBox) questionBox.style.display = 'none';
-        if (correctAnswerModule) correctAnswerModule.style.display = 'none';
-        if (wrongAnswerModule) wrongAnswerModule.style.display = 'none';
+        if (registrationModule) registrationModule.style.display = 'none';
+        if (questionModule) questionModule.style.display = 'none';
+        if (correctModule) correctModule.style.display = 'none';
+        if (incorrectModule) incorrectModule.style.display = 'none';
         if (leaderboardModule) leaderboardModule.style.display = 'none';
     }
-    
-    // Add CSS for diamond hand display
-    const style = document.createElement('style');
-    style.textContent = `
-    .diamond-hand {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin: 20px 0;
-      font-family: monospace;
-      white-space: pre-line;
-    }
-    
-    .hand-middle {
-      display: flex;
-      justify-content: space-between;
-      width: 100%;
-      margin: 10px 0;
-    }
-    
-    .north, .south, .west, .east {
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      background-color: #f9f9f9;
-      min-width: 120px;
-    }
-    
-    .north, .south {
-      text-align: center;
-    }
-    
-    .west {
-      margin-right: 40px;
-    }
-    
-    .east {
-      margin-left: 40px;
-    }
-    
-    .selected {
-      background-color: #e0f7fa !important;
-      border-color: #4CAF50 !important;
-    }
-    `;
-    document.head.appendChild(style);
     
     // Initialize the quiz
     initQuiz();
