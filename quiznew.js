@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Quiz script loaded v2.0.3');
+    console.log('Quiz script loaded v2.0.4');
     
     // Quiz state
     let quizData = null;
@@ -29,8 +29,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Find form elements
-    const firstNameInput = modules.registration.querySelector('input[type="text"]:nth-of-type(1)');
-    const lastNameInput = modules.registration.querySelector('input[type="text"]:nth-of-type(2)');
+    const firstNameInput = document.getElementById('firstName');
+    const lastNameInput = document.getElementById('lastName');
     const startQuizButton = document.getElementById('startquizbtn');
     
     console.log('Form elements:', {
@@ -38,11 +38,6 @@ document.addEventListener('DOMContentLoaded', function() {
         lastNameInput: lastNameInput,
         startQuizButton: startQuizButton
     });
-    
-    if (!firstNameInput || !lastNameInput || !startQuizButton) {
-        console.error('Registration form elements not found');
-        return;
-    }
     
     // Find question elements if questionbox exists
     let questionNumberElement, questionHandElement, biddingBoxElement, 
@@ -101,8 +96,25 @@ document.addEventListener('DOMContentLoaded', function() {
             modules.registration.style.display = 'block';
         }
         
-        // Add event listener to start quiz button
-        if (startQuizButton) {
+        // Set up form validation and button visibility
+        if (firstNameInput && lastNameInput && startQuizButton) {
+            // Initially hide the button
+            startQuizButton.style.display = 'none';
+            
+            // Function to check if both inputs have values
+            function checkInputs() {
+                if (firstNameInput.value.trim() !== '' && lastNameInput.value.trim() !== '') {
+                    startQuizButton.style.display = 'block';
+                } else {
+                    startQuizButton.style.display = 'none';
+                }
+            }
+            
+            // Add event listeners
+            firstNameInput.addEventListener('input', checkInputs);
+            lastNameInput.addEventListener('input', checkInputs);
+            
+            // Add event listener to start quiz button
             startQuizButton.addEventListener('click', startQuiz);
         }
         
@@ -227,8 +239,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Start the quiz
     function startQuiz() {
         // Save user info
-        userInfo.firstName = firstNameInput.value.trim();
-        userInfo.lastName = lastNameInput.value.trim();
+        if (firstNameInput && lastNameInput) {
+            userInfo.firstName = firstNameInput.value.trim();
+            userInfo.lastName = lastNameInput.value.trim();
+        } else if (window.quizUserInfo) {
+            // Get user info from global variable if available
+            userInfo = window.quizUserInfo;
+        }
         
         console.log('Starting quiz for:', userInfo.firstName, userInfo.lastName);
         
@@ -241,6 +258,9 @@ document.addEventListener('DOMContentLoaded', function() {
         hideAllModules();
         showQuestion(currentQuestion);
     }
+    
+    // Make startQuiz function available globally
+    window.startQuiz = startQuiz;
     
     // Show a specific question
     function showQuestion(index) {
@@ -569,6 +589,57 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         };
     })(Element.prototype.querySelector);
+    
+    // Add CSS for diamond hand display
+    function addDiamondHandCSS() {
+        const style = document.createElement('style');
+        style.textContent = `
+        .diamond-hand {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          margin: 20px 0;
+          font-family: monospace;
+          white-space: pre-line;
+        }
+        
+        .hand-middle {
+          display: flex;
+          justify-content: space-between;
+          width: 100%;
+          margin: 10px 0;
+        }
+        
+        .north, .south, .west, .east {
+          padding: 10px;
+          border: 1px solid #ddd;
+          border-radius: 5px;
+          background-color: #f9f9f9;
+          min-width: 120px;
+        }
+        
+        .north, .south {
+          text-align: center;
+        }
+        
+        .west {
+          margin-right: 40px;
+        }
+        
+        .east {
+          margin-left: 40px;
+        }
+        
+        .selected {
+          background-color: #e0f7fa !important;
+          border-color: #4CAF50 !important;
+        }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    // Add the CSS
+    addDiamondHandCSS();
     
     // Initialize the quiz
     initQuiz();
