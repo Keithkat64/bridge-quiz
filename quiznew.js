@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Quiz script loaded v2.0.0 - NEW VERSION');
+    console.log('Quiz script loaded v2.0.1 - FIXED VERSION');
     
     // Quiz state
     let quizData = null;
@@ -11,54 +11,48 @@ document.addEventListener('DOMContentLoaded', function() {
         lastName: ''
     };
     
-    // Find all quiz modules
-    const registrationModule = document.querySelector('h2, h3, h4, h5, h6').textContent.includes('Quiz registration') ? 
-        document.querySelector('h2, h3, h4, h5, h6').closest('div, section') : null;
+    // Find modules by ID
+    const modules = {
+        registration: document.getElementById('registration'),
+        questionbox: document.getElementById('questionbox'),
+        correctBox: document.getElementById('correctBox'),
+        wrongBox: document.getElementById('wrongBox'),
+        leaderboard: document.getElementById('leaderboard')
+    };
     
-    const questionModule = document.querySelector('h2, h3, h4, h5, h6').textContent.includes('Question') ? 
-        document.querySelector('h2, h3, h4, h5, h6').closest('div, section') : null;
+    console.log('Found modules:', modules);
     
-    const correctModule = document.querySelector('h2, h3, h4, h5, h6').textContent.includes('✅Correct') ? 
-        document.querySelector('h2, h3, h4, h5, h6').closest('div, section') : null;
-    
-    const incorrectModule = document.querySelector('h2, h3, h4, h5, h6').textContent.includes('❌Incorrect') ? 
-        document.querySelector('h2, h3, h4, h5, h6').closest('div, section') : null;
-    
-    const leaderboardModule = document.querySelector('h2, h3, h4, h5, h6').textContent.includes('🏆 Leaderboard') ? 
-        document.querySelector('h2, h3, h4, h5, h6').closest('div, section') : null;
-    
-    console.log('Found modules:', {
-        registrationModule,
-        questionModule,
-        correctModule,
-        incorrectModule,
-        leaderboardModule
-    });
+    // Check if modules exist
+    if (!modules.registration || !modules.questionbox || !modules.correctBox || 
+        !modules.wrongBox || !modules.leaderboard) {
+        console.error('One or more quiz modules not found');
+        return;
+    }
     
     // Find form elements
-    const firstNameInput = registrationModule ? registrationModule.querySelector('input[type="text"]:first-of-type') : null;
-    const lastNameInput = registrationModule ? registrationModule.querySelector('input[type="text"]:last-of-type') : null;
-    const startQuizButton = registrationModule ? registrationModule.querySelector('button') : null;
+    const firstNameInput = modules.registration.querySelector('input[name="firstName"]');
+    const lastNameInput = modules.registration.querySelector('input[name="lastName"]');
+    const startQuizButton = modules.registration.querySelector('button');
     
     // Find question elements
-    const questionNumberElement = questionModule ? questionModule.querySelector('h2, h3, h4, h5, h6') : null;
-    const questionHandElement = questionModule ? questionModule.querySelector('div:contains("South holds")') : null;
-    const biddingBoxElement = questionModule ? questionModule.querySelector('div:contains("West")') : null;
-    const optionAElement = questionModule ? questionModule.querySelector('div:contains("option a")') : null;
-    const optionBElement = questionModule ? questionModule.querySelector('div:contains("option b")') : null;
-    const optionCElement = questionModule ? questionModule.querySelector('div:contains("option c")') : null;
-    const seeAnswerButton = questionModule ? questionModule.querySelector('button') : null;
+    const questionNumberElement = modules.questionbox.querySelector('h2, h3, h4, h5, h6');
+    const questionHandElement = modules.questionbox.querySelector('div:contains("South holds")');
+    const biddingBoxElement = modules.questionbox.querySelector('div:contains("West")');
+    const optionAElement = modules.questionbox.querySelector('div:contains("option a")');
+    const optionBElement = modules.questionbox.querySelector('div:contains("option b")');
+    const optionCElement = modules.questionbox.querySelector('div:contains("option c")');
+    const seeAnswerButton = modules.questionbox.querySelector('button');
     
     // Find answer elements
-    const solutionTextCorrect = correctModule ? correctModule.querySelector('div:contains("solution")') : null;
-    const nextQuestionButtonCorrect = correctModule ? correctModule.querySelector('button') : null;
+    const solutionTextCorrect = modules.correctBox.querySelector('div:contains("solution")');
+    const nextQuestionButtonCorrect = modules.correctBox.querySelector('button');
     
-    const solutionTextIncorrect = incorrectModule ? incorrectModule.querySelector('div:contains("solution")') : null;
-    const nextQuestionButtonIncorrect = incorrectModule ? incorrectModule.querySelector('button') : null;
+    const solutionTextIncorrect = modules.wrongBox.querySelector('div:contains("solution")');
+    const nextQuestionButtonIncorrect = modules.wrongBox.querySelector('button');
     
     // Find leaderboard elements
-    const leaderboardTable = leaderboardModule ? leaderboardModule.querySelector('table') : null;
-    const finishQuizButton = leaderboardModule ? leaderboardModule.querySelector('button') : null;
+    const leaderboardTable = modules.leaderboard.querySelector('table');
+    const finishQuizButton = modules.leaderboard.querySelector('button');
     
     // Get quiz data from hidden input
     const quizDataInput = document.getElementById('quiz-data');
@@ -77,9 +71,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Hide all modules except registration
         hideAllModules();
-        if (registrationModule) {
-            registrationModule.style.display = 'block';
-        }
+        modules.registration.style.display = 'block';
         
         // Add event listeners to name inputs
         if (firstNameInput && lastNameInput) {
@@ -120,20 +112,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (finishQuizButton) {
             finishQuizButton.addEventListener('click', finishQuiz);
         }
-        
-        // Add CSS for diamond hand display
-        addDiamondHandCSS();
-    }
-    
-    // Helper function to find elements by text content
-    function findElementByText(selector, text) {
-        const elements = document.querySelectorAll(selector);
-        for (const element of elements) {
-            if (element.textContent.includes(text)) {
-                return element;
-            }
-        }
-        return null;
     }
     
     // Check if both first and last name are entered
@@ -310,9 +288,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Show question box
-        if (questionModule) {
-            questionModule.style.display = 'block';
-        }
+        modules.questionbox.style.display = 'block';
     }
     
     // Handle option selection
@@ -325,9 +301,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add selected class to clicked option
         optionElement.classList.add('selected');
         
-        // Store the selected option
-        selectedOption = optionValue;
-        
         // Enable see answer button
         if (seeAnswerButton) {
             seeAnswerButton.disabled = false;
@@ -337,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Show answer based on selected option
     function showAnswer() {
         // Get selected option
-        const selectedOption = questionModule.querySelector('.selected');
+        const selectedOption = modules.questionbox.querySelector('.selected');
         if (!selectedOption) {
             return;
         }
@@ -364,16 +337,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Hide question box
-        if (questionModule) {
-            questionModule.style.display = 'none';
-        }
+        modules.questionbox.style.display = 'none';
         
         // Show appropriate answer module
         if (isCorrect) {
             // Show correct answer module
-            if (correctModule) {
-                correctModule.style.display = 'block';
-            }
+            modules.correctBox.style.display = 'block';
             
             // Update solution text
             if (solutionTextCorrect) {
@@ -381,20 +350,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Add diamond hand display
-            const diamondHandContainer = correctModule.querySelector('div:empty') || 
+            const diamondHandContainer = modules.correctBox.querySelector('div:empty') || 
                 document.createElement('div');
             
             if (diamondHandContainer) {
                 diamondHandContainer.innerHTML = formatDiamondHand(question.allHands);
                 if (!diamondHandContainer.parentNode) {
-                    correctModule.appendChild(diamondHandContainer);
+                    modules.correctBox.appendChild(diamondHandContainer);
                 }
             }
         } else {
             // Show incorrect answer module
-            if (incorrectModule) {
-                incorrectModule.style.display = 'block';
-            }
+            modules.wrongBox.style.display = 'block';
             
             // Update solution text
             if (solutionTextIncorrect) {
@@ -402,13 +369,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Add diamond hand display
-            const diamondHandContainer = incorrectModule.querySelector('div:empty') || 
+            const diamondHandContainer = modules.wrongBox.querySelector('div:empty') || 
                 document.createElement('div');
             
             if (diamondHandContainer) {
                 diamondHandContainer.innerHTML = formatDiamondHand(question.allHands);
                 if (!diamondHandContainer.parentNode) {
-                    incorrectModule.appendChild(diamondHandContainer);
+                    modules.wrongBox.appendChild(diamondHandContainer);
                 }
             }
         }
@@ -430,59 +397,11 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
     }
     
-    // Add CSS for diamond hand display
-    function addDiamondHandCSS() {
-        const style = document.createElement('style');
-        style.textContent = `
-        .diamond-hand {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          margin: 20px 0;
-          font-family: monospace;
-          white-space: pre-line;
-        }
-        
-        .hand-middle {
-          display: flex;
-          justify-content: space-between;
-          width: 100%;
-          margin: 10px 0;
-        }
-        
-        .north, .south, .west, .east {
-          padding: 10px;
-          border: 1px solid #ddd;
-          border-radius: 5px;
-          background-color: #f9f9f9;
-          min-width: 120px;
-        }
-        
-        .north, .south {
-          text-align: center;
-        }
-        
-        .west {
-          margin-right: 40px;
-        }
-        
-        .east {
-          margin-left: 40px;
-        }
-        
-        .selected {
-          background-color: #e0f7fa !important;
-          border-color: #4CAF50 !important;
-        }
-        `;
-        document.head.appendChild(style);
-    }
-    
     // Go to next question
     function nextQuestion() {
         // Hide answer modules
-        if (correctModule) correctModule.style.display = 'none';
-        if (incorrectModule) incorrectModule.style.display = 'none';
+        modules.correctBox.style.display = 'none';
+        modules.wrongBox.style.display = 'none';
         
         // Increment question index
         currentQuestion++;
@@ -511,9 +430,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateLeaderboardDisplay();
         
         // Show leaderboard module
-        if (leaderboardModule) {
-            leaderboardModule.style.display = 'block';
-        }
+        modules.leaderboard.style.display = 'block';
     }
     
     // Save score to local storage
@@ -584,9 +501,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Finish quiz and reset
     function finishQuiz() {
         hideAllModules();
-        if (registrationModule) {
-            registrationModule.style.display = 'block';
-        }
+        modules.registration.style.display = 'block';
         
         // Clear inputs
         if (firstNameInput) firstNameInput.value = '';
@@ -600,11 +515,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Hide all modules
     function hideAllModules() {
-        if (registrationModule) registrationModule.style.display = 'none';
-        if (questionModule) questionModule.style.display = 'none';
-        if (correctModule) correctModule.style.display = 'none';
-        if (incorrectModule) incorrectModule.style.display = 'none';
-        if (leaderboardModule) leaderboardModule.style.display = 'none';
+        modules.registration.style.display = 'none';
+        modules.questionbox.style.display = 'none';
+        modules.correctBox.style.display = 'none';
+        modules.wrongBox.style.display = 'none';
+        modules.leaderboard.style.display = 'none';
     }
     
     // Initialize the quiz
