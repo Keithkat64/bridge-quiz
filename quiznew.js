@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Quiz script loaded v3.2.0 - Direct DOM approach');
+    console.log('Quiz script loaded v4.0.0 - Custom Registration Form');
     
     // Quiz state
     let quizData = null;
@@ -27,75 +27,27 @@ document.addEventListener('DOMContentLoaded', function() {
         leaderboard: !!leaderboardSection
     });
     
-    // If sections not found by ID, try finding by heading text
-    if (!registrationSection) {
-        registrationSection = findSectionByText('Quiz registration');
-    }
+    // Find form elements in the custom registration form
+    const registrationForm = document.getElementById('quiz-registration-form');
+    const firstNameInput = document.getElementById('firstName');
+    const lastNameInput = document.getElementById('lastName');
+    const startQuizButton = document.getElementById('startquizbtn');
     
-    if (!questionSection) {
-        questionSection = findSectionByText('Question 1');
-    }
-    
-    if (!correctSection) {
-        correctSection = findSectionByText('✅Correct');
-    }
-    
-    if (!incorrectSection) {
-        incorrectSection = findSectionByText('❌Incorrect');
-    }
-    
-    if (!leaderboardSection) {
-        leaderboardSection = findSectionByText('🏆 Leaderboard');
-    }
-    
-    console.log('Found sections after text search:', {
-        registration: !!registrationSection,
-        question: !!questionSection,
-        correct: !!correctSection,
-        incorrect: !!incorrectSection,
-        leaderboard: !!leaderboardSection
+    console.log('Found form elements:', {
+        form: !!registrationForm,
+        firstName: !!firstNameInput,
+        lastName: !!lastNameInput,
+        startButton: !!startQuizButton
     });
     
-    // Helper function to find a section by text content
-    function findSectionByText(text) {
-        const elements = document.querySelectorAll('*');
-        for (const el of elements) {
-            if (el.textContent.includes(text) && 
-                (el.tagName === 'H1' || el.tagName === 'H2' || 
-                 el.tagName === 'H3' || el.tagName === 'H4' || 
-                 el.tagName === 'H5' || el.tagName === 'H6')) {
-                // Return the parent section or div
-                return el.closest('section') || el.closest('div');
-            }
-        }
-        return null;
-    }
-    
-    // Find form elements
-    const form = registrationSection ? registrationSection.querySelector('form') : null;
-    const formInputs = form ? form.querySelectorAll('input[type="text"]') : [];
-    const firstNameInput = formInputs[0] || null;
-    const lastNameInput = formInputs[1] || null;
-    const startQuizButton = form ? form.querySelector('button') : null;
-    
-    // Find question elements - specifically look for the button with placeholder "Question 1"
-    const questionNumberButton = questionSection ? questionSection.querySelector('button:contains("Question")') : null;
+    // Find question elements
+    const questionNumberButton = questionSection ? questionSection.querySelector('button') : null;
     const southHandDiv = questionSection ? questionSection.querySelector('div:contains("South holds")') : null;
     const biddingDiv = questionSection ? questionSection.querySelector('div:contains("West")') : null;
     const optionA = questionSection ? questionSection.querySelector('div:contains("A")') : null;
     const optionB = questionSection ? questionSection.querySelector('div:contains("B")') : null;
     const optionC = questionSection ? questionSection.querySelector('div:contains("C")') : null;
     const seeAnswerButton = questionSection ? questionSection.querySelector('button:contains("See")') : null;
-    
-    console.log('Question elements:', {
-        questionNumberButton: !!questionNumberButton,
-        southHandDiv: !!southHandDiv,
-        biddingDiv: !!biddingDiv,
-        optionA: !!optionA,
-        optionB: !!optionB,
-        optionC: !!optionC,
-        seeAnswerButton: !!seeAnswerButton
-    });
     
     // Find solution elements
     const correctSolutionDiv = correctSection ? correctSection.querySelector('div:nth-of-type(1)') : null;
@@ -130,8 +82,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Set up form submission
-        if (form) {
-            form.addEventListener('submit', function(e) {
+        if (registrationForm) {
+            registrationForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 startQuiz();
             });
@@ -532,6 +484,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Clear inputs
         if (firstNameInput) firstNameInput.value = '';
         if (lastNameInput) lastNameInput.value = '';
+        
+        // Hide start button again
+        if (startQuizButton) {
+            startQuizButton.style.display = 'none';
+        }
         
         // Show registration section
         if (registrationSection) {
