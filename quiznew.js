@@ -1,19 +1,20 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Quiz script loaded v9.1.0 - Elementor Form Fix');
+    console.log('Quiz script loaded v10.0.0 - Direct Start');
 
     // Quiz state
     let quizData = null;
     let currentQuestion = 0;
     let userScore = 0;
     let userAnswers = [];
-    let userInfo = {
-        firstName: '',
-        lastName: ''
+    let userInfo = { // Simplified as no registration form
+        firstName: 'Guest',
+        lastName: 'Player'
     };
     let selectedOption = null; // Stores the selected option (e.g., 'a', 'b', 'c')
 
     // --- Module Element References ---
     // Find modules by their unique heading text. This is more reliable for Elementor.
+    // Note: Registration module is still found for hiding purposes, but not used for input.
     const registrationModule = findModuleByHeadingText('Quiz registration');
     const questionboxModule = findModuleByHeadingText('Question 1'); // Initial heading for question module
     const correctBoxModule = findModuleByHeadingText('✅Correct');
@@ -28,29 +29,21 @@ document.addEventListener('DOMContentLoaded', function() {
         leaderboard: !!leaderboardModule
     });
 
-    // --- Registration Module Elements ---
-    const registrationForm = registrationModule ? registrationModule.querySelector('form') : null;
-    // Elementor form inputs often have name="form_field_name" and name="form_field_name_0"
-    const firstNameInput = registrationForm ? registrationForm.querySelector('input[name="form_field_name"]') : null;
-    const lastNameInput = registrationForm ? registrationForm.querySelector('input[name="form_field_name_0"]') : null;
-    const startQuizButton = document.getElementById('startquizbtn') || (registrationForm ? registrationForm.querySelector('button[type="submit"]') : null);
-
-    console.log('Registration elements (refined selectors):', {
-        form: !!registrationForm,
-        firstName: firstNameInput ? firstNameInput.outerHTML : 'Not Found',
-        lastName: lastNameInput ? lastNameInput.outerHTML : 'Not Found',
-        startButton: startQuizButton ? startQuizButton.outerHTML : 'Not Found'
-    });
-
     // --- Question Box Module Elements ---
-    const questionNumberField = questionboxModule ? questionboxModule.querySelector('h1, h2, h3, h4, h5, h6') : null; // The actual heading element
-    const southHandBox = questionboxModule ? questionboxModule.querySelector('div:nth-of-type(2)') : null; // Div containing "South holds"
-    const biddingBox = questionboxModule ? questionboxModule.querySelector('div:nth-of-type(3)') : null; // Div containing bidding table
-    const optionsBox = questionboxModule ? questionboxModule.querySelector('div:nth-of-type(4)') : null; // Div containing options A, B, C
-    const optionA = optionsBox ? optionsBox.querySelector('.option-btn:nth-child(1)') : null;
-    const optionB = optionsBox ? optionsBox.querySelector('.option-btn:nth-child(2)') : null;
-    const optionC = optionsBox ? optionsBox.querySelector('.option-btn:nth-child(3)') : null;
-    const seeAnswerButton = questionboxModule ? questionboxModule.querySelector('button') : null;
+    // The main heading for the question module (e.g., "Question 1")
+    const questionNumberField = questionboxModule ? questionboxModule.querySelector('h1, h2, h3, h4, h5, h6') : null;
+    // The div containing "South holds" and the hand
+    const southHandBox = questionboxModule ? questionboxModule.querySelector('.hand-box') : null;
+    // The div containing the bidding table
+    const biddingBox = questionboxModule ? questionboxModule.querySelector('.bidding-box') : null;
+    // The div containing the options buttons
+    const optionsBox = questionboxModule ? questionboxModule.querySelector('.options-container') : null;
+    // Individual option buttons (will be dynamically updated)
+    const optionA = optionsBox ? optionsBox.querySelector('.option-btn[data-option="a"]') : null;
+    const optionB = optionsBox ? optionsBox.querySelector('.option-btn[data-option="b"]') : null;
+    const optionC = optionsBox ? optionsBox.querySelector('.option-btn[data-option="c"]') : null;
+    // The "See Solution" button
+    const seeAnswerButton = questionboxModule ? questionboxModule.querySelector('.see-answer-btn') : null;
 
     console.log('Question elements:', {
         questionNumberField: !!questionNumberField,
@@ -66,12 +59,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Correct/Incorrect Box Module Elements ---
     const correctSolutionDiv = correctBoxModule ? correctBoxModule.querySelector('.solution-text') : null;
     const incorrectSolutionDiv = wrongBoxModule ? wrongBoxModule.querySelector('.solution-text') : null;
-    const nextButtonCorrect = correctBoxModule ? correctBoxModule.querySelector('button') : null;
-    const nextButtonIncorrect = wrongBoxModule ? wrongBoxModule.querySelector('button') : null;
+    const nextButtonCorrect = correctBoxModule ? correctBoxModule.querySelector('.next-question-btn') : null;
+    const nextButtonIncorrect = wrongBoxModule ? wrongBoxModule.querySelector('.next-question-btn') : null;
 
     // --- Leaderboard Module Elements ---
     const leaderboardTableBody = leaderboardModule ? leaderboardModule.querySelector('table tbody') : null; // Target tbody for dynamic updates
-    const finishButton = leaderboardModule ? leaderboardModule.querySelector('button') : null;
+    const finishButton = leaderboardModule ? leaderboardModule.querySelector('.finish-quiz-btn') : null;
 
     // Get quiz data from hidden input
     const quizDataInput = document.getElementById('quiz-data');
@@ -174,7 +167,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function formatSouthHand(handText) {
         if (!handText) return '';
         const lines = handText.split('\n');
-        let html = 'South holds<br>';
+        let html = '<span class="south-label">South holds</span><br>'; // Use the span as in your HTML
         lines.forEach(line => {
             const parts = line.split(' ');
             if (parts.length >= 2) {
@@ -211,16 +204,16 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!options) return '';
         let html = '';
         if (options.a) {
-            html += `<div id="option-a" class="option-btn" data-option="a"><span class="option-letter">A</span><span class="option-text">option a) ${options.a}</span></div>`;
+            html += `<div id="option-a" class="option-btn" data-option="a"><span class="option-letter">A</span><span class="option-text">${options.a}</span></div>`; // Removed "option a)" prefix
         }
         if (options.b) {
-            html += `<div id="option-b" class="option-btn" data-option="b"><span class="option-letter">B</span><span class="option-text">option b) ${options.b}</span></div>`;
+            html += `<div id="option-b" class="option-btn" data-option="b"><span class="option-letter">B</span><span class="option-text">${options.b}</span></div>`; // Removed "option b)" prefix
         }
         if (options.c) {
-            html += `<div id="option-c" class="option-btn" data-option="c"><span class="option-letter">C</span><span class="option-text">option c) ${options.c}</span></div>`;
+            html += `<div id="option-c" class="option-btn" data-option="c"><span class="option-letter">C</span><span class="option-text">${options.c}</span></div>`; // Removed "option c)" prefix
         }
         if (options.d) { // Added support for option D
-            html += `<div id="option-d" class="option-btn" data-option="d"><span class="option-letter">D</span><span class="option-text">option d) ${options.d}</span></div>`;
+            html += `<div id="option-d" class="option-btn" data-option="d"><span class="option-letter">D</span><span class="option-text">${options.d}</span></div>`;
         }
         return html;
     }
@@ -291,37 +284,11 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Hide all modules except registration initially
+        // Hide all modules (including registration)
         hideAllModules();
-        if (registrationModule) {
-            registrationModule.style.display = 'block';
-        }
-
-        // Set up form validation and button visibility
-        if (firstNameInput && lastNameInput && startQuizButton) {
-            startQuizButton.style.display = 'none'; // Ensure hidden initially
-
-            function checkInputs() {
-                if (firstNameInput.value.trim() !== '' && lastNameInput.value.trim() !== '') {
-                    startQuizButton.style.display = 'block';
-                } else {
-                    startQuizButton.style.display = 'none';
-                }
-            }
-            firstNameInput.addEventListener('input', checkInputs);
-            lastNameInput.addEventListener('input', checkInputs);
-            checkInputs(); // Initial check on load
-        }
-
-        // Set up form submission (for Elementor form)
-        if (registrationForm) {
-            registrationForm.addEventListener('submit', function(e) {
-                e.preventDefault(); // Prevent default form submission
-                startQuiz();
-            });
-        } else if (startQuizButton) { // Fallback if not part of a form
-            startQuizButton.addEventListener('click', startQuiz);
-        }
+        
+        // Start the quiz directly by showing the first question
+        startQuiz();
 
         // Add event listeners for options (will be re-attached in showQuestion)
         // and other buttons
@@ -335,8 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function startQuiz() {
-        userInfo.firstName = firstNameInput ? firstNameInput.value.trim() : 'Guest';
-        userInfo.lastName = lastNameInput ? lastNameInput.value.trim() : '';
+        // User info is simplified as no registration form
         console.log('Starting quiz for:', userInfo.firstName, userInfo.lastName);
 
         currentQuestion = 0;
@@ -412,7 +378,7 @@ document.addEventListener('DOMContentLoaded', function() {
             diamondContainer = document.createElement('div');
             diamondContainer.className = 'diamond-display-wrapper';
             // Insert before the next question button
-            const nextBtn = module.querySelector('button');
+            const nextBtn = module.querySelector('.next-question-btn'); // Use class for consistency
             if (nextBtn) {
                 module.insertBefore(diamondContainer, nextBtn);
             } else {
@@ -471,10 +437,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function finishQuiz() {
         hideAllModules();
-        if (firstNameInput) firstNameInput.value = '';
-        if (lastNameInput) lastNameInput.value = '';
-        if (startQuizButton) startQuizButton.style.display = 'none'; // Hide button again
-        if (registrationModule) registrationModule.style.display = 'block';
+        // No registration form to clear/show, so just reset to initial state
+        // If you want to show a "Thank you" message or similar, add it here.
+        console.log("Quiz finished. Thank you for playing!");
     }
 
     function hideAllModules() {
@@ -506,7 +471,7 @@ document.addEventListener('DOMContentLoaded', function() {
             gap: 20px;
         }
 
-        /* Registration Form Specifics */
+        /* Registration Form Specifics (still included for completeness, though not used in v10.0.0 flow) */
         .elementor-form-container { /* Assuming this is the wrapper for your form */
             /* Inherits from .quiz-module if it's the main container */
         }
@@ -761,26 +726,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         /* Next Question Button */
-.next-question-btn {
-    background-color: #4CA6A8;
-    color: white;
-    border: 1px solid #4CA6A8;
-    border-radius: 12px;
-    padding: 2px 10px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: 500;
-    transition: all 0.3s;
-    align-self: center;
-    margin-top: 10px;
-}
+        .next-question-btn {
+            background-color: #4CA6A8;
+            color: white;
+            border: 1px solid #4CA6A8;
+            border-radius: 12px;
+            padding: 2px 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s;
+            align-self: center;
+            margin-top: 10px;
+        }
 
-.next-question-btn:hover {
-    background-color: #3d8587;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
+        .next-question-btn:hover {
+            background-color: #3d8587;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
 
-/* Leaderboard Specifics */
+        /* Leaderboard Specifics */
 .leaderboard-header {
     display: flex;
     align-items: center;
@@ -878,8 +843,70 @@ document.addEventListener('DOMContentLoaded', function() {
         padding: 8px 10px;
         font-size: 14px;
     }
-}  /* Make sure this curly brace is here */
-`;
-document.head.appendChild(style);
+}
+`; // This closes the style.textContent backtick string
+document.head.appendChild(style); // This appends the style element to the head
+} // This closes the addDynamicCSS function
 
+// Helper function to find elements by text content (for Element.prototype.querySelector)
+// This is a polyfill for :contains() selector, which is not standard CSS
+// It's placed here to ensure it's available before initQuiz is called.
+if (!Element.prototype.matches) {
+    Element.prototype.matches = Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector;
+}
+
+if (!Element.prototype.closest) {
+    Element.prototype.closest = function(s) {
+        var el = this;
+        do {
+            if (el.matches(s)) return el;
+            el = el.parentElement || el.parentNode;
+        } while (el !== null && el.nodeType === 1);
+        return null;
+    };
+}
+
+// Custom querySelector for :contains()
+(function() {
+    var originalQuerySelector = Element.prototype.querySelector;
+    Element.prototype.querySelector = function(selector) {
+        if (selector.includes(':contains(')) {
+            const match = selector.match(/(.*):contains\("(.*)"\)(.*)/);
+            if (match) {
+                const [_, before, text, after] = match;
+                const elements = this.querySelectorAll(before + after);
+                for (let i = 0; i < elements.length; i++) {
+                    if (elements[i].textContent.includes(text)) {
+                        return elements[i];
+                    }
+                }
+                return null;
+            }
+        }
+        return originalQuerySelector.call(this, selector);
+    };
+
+    var originalQuerySelectorAll = Element.prototype.querySelectorAll;
+    Element.prototype.querySelectorAll = function(selector) {
+        if (selector.includes(':contains(')) {
+            const match = selector.match(/(.*):contains\("(.*)"\)(.*)/);
+            if (match) {
+                const [_, before, text, after] = match;
+                const elements = originalQuerySelectorAll.call(this, before + after);
+                const filtered = [];
+                for (let i = 0; i < elements.length; i++) {
+                    if (elements[i].textContent.includes(text)) {
+                        filtered.push(elements[i]);
+                    }
+                }
+                return filtered;
+            }
+        }
+        return originalQuerySelectorAll.call(this, selector);
+    };
+})();
+
+// Initialize the quiz
 initQuiz();
+}); // This closes the main DOMContentLoaded function
+
