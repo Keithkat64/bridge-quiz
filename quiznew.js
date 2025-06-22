@@ -880,6 +880,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }  /* Make sure this curly brace is here */
 `;
-document.head.insertAdjacentHTML('beforeend', `<style>${style}</style>`);
+document.head.appendChild(style);
 
 initQuiz();
