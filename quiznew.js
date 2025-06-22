@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Quiz script loaded v10.0.0 - Direct Start');
+    console.log('Quiz script loaded v10.2.0 - Syntax Fix');
 
     // Quiz state
     let quizData = null;
@@ -14,22 +14,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Module Element References ---
     // Find modules by their unique heading text. This is more reliable for Elementor.
-    // Note: Registration module is still found for hiding purposes, but not used for input.
-    const registrationModule = findModuleByHeadingText('Quiz registration');
+    // Note: 
     const questionboxModule = findModuleByHeadingText('Question 1'); // Initial heading for question module
     const correctBoxModule = findModuleByHeadingText('✅Correct');
     const wrongBoxModule = findModuleByHeadingText('❌Incorrect');
     const leaderboardModule = findModuleByHeadingText('🏆 Leaderboard');
 
     console.log('Found modules:', {
-        registration: !!registrationModule,
         questionbox: !!questionboxModule,
         correctBox: !!correctBoxModule,
         wrongBox: !!wrongBoxModule,
         leaderboard: !!leaderboardModule
     });
 
-    // --- Question Box Module Elements ---
+        // --- Question Box Module Elements ---
     // The main heading for the question module (e.g., "Question 1")
     const questionNumberField = questionboxModule ? questionboxModule.querySelector('h1, h2, h3, h4, h5, h6') : null;
     // The div containing "South holds" and the hand
@@ -284,10 +282,13 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Hide all modules (including registration)
+        // Hide all modules except questionbox initially
         hideAllModules();
+        if (questionboxModule) {
+            questionboxModule.style.display = 'block';
+        }
         
-        // Start the quiz directly by showing the first question
+        // Start the quiz directly
         startQuiz();
 
         // Add event listeners for options (will be re-attached in showQuestion)
@@ -334,7 +335,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         selectedOption = null; // Reset selection
-        if (seeAnswerButton) seeAnswerButton.disabled = true; // Disable button
+        if (seeAnswerButton) seeAnswerButton.style.display = 'none'; // Hide button initially
+        if (seeAnswerButton) seeAnswerButton.disabled = true; // Disable button initially
 
         if (questionboxModule) questionboxModule.style.display = 'block';
     }
@@ -344,7 +346,8 @@ document.addEventListener('DOMContentLoaded', function() {
         allOptionButtons.forEach(btn => btn.classList.remove('selected'));
         element.classList.add('selected');
         selectedOption = optionValue;
-        if (seeAnswerButton) seeAnswerButton.disabled = false;
+        if (seeAnswerButton) seeAnswerButton.style.display = 'block'; // Show button
+        if (seeAnswerButton) seeAnswerButton.disabled = false; // Enable button
     }
 
     function showAnswer() {
@@ -443,7 +446,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function hideAllModules() {
-        if (registrationModule) registrationModule.style.display = 'none';
         if (questionboxModule) questionboxModule.style.display = 'none';
         if (correctBoxModule) correctBoxModule.style.display = 'none';
         if (wrongBoxModule) wrongBoxModule.style.display = 'none';
@@ -589,7 +591,7 @@ document.addEventListener('DOMContentLoaded', function() {
             background-color: #e0f7fa;
             border-color: #4CAF50;
         }
-        .option-letter {
+         .option-letter {
             background-color: #4CA6A8;
             color: white;
             width: 28px;
@@ -909,4 +911,3 @@ if (!Element.prototype.closest) {
 // Initialize the quiz
 initQuiz();
 }); // This closes the main DOMContentLoaded function
-
