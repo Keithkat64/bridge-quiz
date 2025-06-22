@@ -1,80 +1,73 @@
+document.addEventListener("DOMContentLoaded", function () {
+    const questions = Array.from(document.querySelectorAll("#hiddenData .question"));
+    const questionBox = document.getElementById("questionBox");
+    const southHandBox = document.getElementById("southhandBox");
+    const biddingBox = document.getElementById("biddingBox");
+    const optionsBox = document.getElementById("optionsBox");
+    const seeAnswerBtn = document.getElementById("see-answer");
 
-document.addEventListener('DOMContentLoaded', function () {
     let currentQuestionIndex = 0;
-    const hiddenData = document.querySelectorAll('#hiddenData .question');
-    const questionBox = document.getElementById('questionBox');
-    const southhandBox = document.getElementById('southhandBox');
-    const biddingBox = document.getElementById('biddingBox');
-    const optionBtns = document.querySelectorAll('.option-btn');
-    const seeAnswerBtn = document.getElementById('see-answer');
-    let selectedOption = null;
+    let selectedAnswer = null;
 
     function loadQuestion(index) {
-        if (index >= hiddenData.length) return;
+        const question = questions[index];
+        if (!question) return;
 
-        const data = hiddenData[index];
-        const southhand = data.querySelector('.southhand')?.innerHTML || '';
-        const bidding = data.querySelector('.bidding')?.innerHTML || '';
-        const options = {
-            a: data.querySelector('.option-a')?.textContent || '',
-            b: data.querySelector('.option-b')?.textContent || '',
-            c: data.querySelector('.option-c')?.textContent || '',
-            d: data.querySelector('.option-d')?.textContent || '',
-        };
-
-        const correctAnswer = data.getAttribute('data-answer');
-
-        southhandBox.innerHTML = '<span class="south-label">South holds</span><br>' + southhand;
+        const southhand = question.querySelector(".southhand")?.innerHTML || "";
+        const bidding = question.querySelector(".bidding")?.innerHTML || "";
+        const options = ["a", "b", "c", "d"];
+        
+        southHandBox.innerHTML = '<span class="south-label">South holds</span><br>' + southhand;
         biddingBox.innerHTML = bidding;
+        optionsBox.innerHTML = ""; // Clear previous
 
-        optionBtns.forEach(btn => {
-            btn.classList.remove('selected');
-            const id = btn.id;
-            const letter = id.split('-')[1];
-            const textSpan = btn.querySelector('.option-text');
-            if (textSpan) {
-                textSpan.textContent = options[letter] || '';
+        options.forEach(letter => {
+            const text = question.querySelector(".option-" + letter)?.textContent || "";
+            if (text.trim()) {
+                const btn = document.createElement("div");
+                btn.className = "option-btn";
+                btn.dataset.option = letter;
+                btn.innerHTML = `<span class="option-letter">${letter.toUpperCase()}</span><span class="option-text">${text.slice(3)}</span>`;
+                btn.addEventListener("click", () => handleOptionClick(letter));
+                optionsBox.appendChild(btn);
             }
         });
 
-        selectedOption = null;
         seeAnswerBtn.disabled = true;
+        seeAnswerBtn.style.display = "none";
 
-        seeAnswerBtn.onclick = function () {
-            if (!selectedOption) return;
-
-            const isCorrect = selectedOption.toLowerCase() === correctAnswer.toLowerCase();
-            const correctBox = document.getElementById('correctBox');
-            const wrongBox = document.getElementById('wrongBox');
-
-            correctBox.style.display = isCorrect ? 'block' : 'none';
-            wrongBox.style.display = isCorrect ? 'none' : 'block';
-
-            const solutionText = data.querySelector('.solution')?.innerHTML || '';
-            const solutionBox = isCorrect ? correctBox : wrongBox;
-            const solutionArea = solutionBox.querySelector('.solution-text');
-            if (solutionArea) {
-                solutionArea.innerHTML = solutionText;
-            }
-
-            // Add "Next Question" Button
-            const nextBtn = solutionBox.querySelector('.next-question-btn');
-            nextBtn.onclick = function () {
-                correctBox.style.display = 'none';
-                wrongBox.style.display = 'none';
-                currentQuestionIndex++;
-                loadQuestion(currentQuestionIndex);
-            };
-        };
+        questionBox.style.display = "block";
     }
 
-    optionBtns.forEach(btn => {
-        btn.addEventListener('click', function () {
-            optionBtns.forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            selectedOption = btn.id.split('-')[1]; // 'a', 'b', 'c', 'd'
-            seeAnswerBtn.disabled = false;
+    function handleOptionClick(letter) {
+        selectedAnswer = letter;
+        document.querySelectorAll(".option-btn").forEach(btn => {
+            btn.classList.remove("selected");
+            if (btn.dataset.option === letter) {
+                btn.classList.add("selected");
+            }
         });
+        seeAnswerBtn.disabled = false;
+        seeAnswerBtn.style.display = "block";
+    }
+
+    seeAnswerBtn.addEventListener("click", () => {
+        const question = questions[currentQuestionIndex];
+        const correctAnswer = question.dataset.answer;
+        const solution = question.querySelector(".solution")?.innerHTML || "";
+
+        if (selectedAnswer === correctAnswer) {
+            alert("✅ Correct!\\n\\n" + solution);
+        } else {
+            alert("❌ Incorrect.\\n\\n" + solution);
+        }
+
+        currentQuestionIndex++;
+        if (currentQuestionIndex < questions.length) {
+            loadQuestion(currentQuestionIndex);
+        } else {
+            alert("You've finished the quiz!");
+        }
     });
 
     loadQuestion(currentQuestionIndex);
