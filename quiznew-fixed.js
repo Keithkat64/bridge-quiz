@@ -1,74 +1,85 @@
+
+let currentQuestionIndex = 0;
+let selectedAnswer = null;
+
 document.addEventListener("DOMContentLoaded", function () {
-    const questions = Array.from(document.querySelectorAll("#hiddenData .question"));
     const questionBox = document.getElementById("questionBox");
     const southHandBox = document.getElementById("southhandBox");
     const biddingBox = document.getElementById("biddingBox");
     const optionsBox = document.getElementById("optionsBox");
     const seeAnswerBtn = document.getElementById("see-answer");
-
-    let currentQuestionIndex = 0;
-    let selectedAnswer = null;
+    const hiddenData = document.getElementById("hiddenData");
+    const questionElements = hiddenData.querySelectorAll(".question");
 
     function loadQuestion(index) {
-        const question = questions[index];
+        const question = questionElements[index];
         if (!question) return;
 
-        const southhand = question.querySelector(".southhand")?.innerHTML || "";
-        const bidding = question.querySelector(".bidding")?.innerHTML || "";
-        const options = ["a", "b", "c", "d"];
-        
-        southHandBox.innerHTML = '<span class="south-label">South holds</span><br>' + southhand;
-        biddingBox.innerHTML = bidding;
-        optionsBox.innerHTML = ""; // Clear previous
+        // Show question box
+        questionBox.style.display = "block";
 
-        options.forEach(letter => {
-            const text = question.querySelector(".option-" + letter)?.textContent || "";
-            if (text.trim()) {
-                const btn = document.createElement("div");
-                btn.className = "option-btn";
-                btn.dataset.option = letter;
-                btn.innerHTML = `<span class="option-letter">${letter.toUpperCase()}</span><span class="option-text">${text.slice(3)}</span>`;
-                btn.addEventListener("click", () => handleOptionClick(letter));
-                optionsBox.appendChild(btn);
+        // Fill in south hand
+        southHandBox.innerHTML = "<span class='south-label'>South holds</span><br>" + question.querySelector(".southhand").innerHTML;
+
+        // Fill in bidding
+        biddingBox.innerHTML = question.querySelector(".bidding").outerHTML;
+
+        // Fill in options
+        const letters = ["a", "b", "c", "d"];
+        letters.forEach(letter => {
+            const opt = question.querySelector(".option-" + letter);
+            const btn = document.getElementById("option-" + letter);
+            if (opt && btn) {
+                btn.querySelector(".option-text").textContent = opt.textContent.trim();
+                btn.style.display = "block";
+            } else if (btn) {
+                btn.style.display = "none";
             }
         });
 
+        // Reset button states
+        selectedAnswer = null;
         seeAnswerBtn.disabled = true;
         seeAnswerBtn.style.display = "none";
 
-        questionBox.style.display = "block";
-    }
-
-    function handleOptionClick(letter) {
-        selectedAnswer = letter;
         document.querySelectorAll(".option-btn").forEach(btn => {
             btn.classList.remove("selected");
-            if (btn.dataset.option === letter) {
-                btn.classList.add("selected");
+            btn.onclick = null;
+        });
+
+        // Add new click listeners
+        letters.forEach(letter => {
+            const btn = document.getElementById("option-" + letter);
+            if (btn) {
+                btn.onclick = () => {
+                    document.querySelectorAll(".option-btn").forEach(b => b.classList.remove("selected"));
+                    btn.classList.add("selected");
+                    selectedAnswer = letter;
+                    seeAnswerBtn.disabled = false;
+                    seeAnswerBtn.style.display = "block";
+                };
             }
         });
-        seeAnswerBtn.disabled = false;
-        seeAnswerBtn.style.display = "block";
+
+        // Store solution
+        seeAnswerBtn.onclick = () => {
+            const correctAnswer = question.dataset.answer;
+            const correctBox = document.getElementById("correctBox");
+            const wrongBox = document.getElementById("wrongBox");
+            const solutionText = question.querySelector(".solution").textContent;
+
+            if (selectedAnswer === correctAnswer) {
+                correctBox.querySelector(".solution-text").textContent = solutionText;
+                correctBox.style.display = "block";
+                wrongBox.style.display = "none";
+            } else {
+                wrongBox.querySelector(".solution-text").textContent = solutionText;
+                wrongBox.style.display = "block";
+                correctBox.style.display = "none";
+            }
+        };
     }
 
-    seeAnswerBtn.addEventListener("click", () => {
-        const question = questions[currentQuestionIndex];
-        const correctAnswer = question.dataset.answer;
-        const solution = question.querySelector(".solution")?.innerHTML || "";
-
-        if (selectedAnswer === correctAnswer) {
-            alert("✅ Correct!\\n\\n" + solution);
-        } else {
-            alert("❌ Incorrect.\\n\\n" + solution);
-        }
-
-        currentQuestionIndex++;
-        if (currentQuestionIndex < questions.length) {
-            loadQuestion(currentQuestionIndex);
-        } else {
-            alert("You've finished the quiz!");
-        }
-    });
-
+    // Initial load
     loadQuestion(currentQuestionIndex);
 });
