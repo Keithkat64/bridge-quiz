@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Quiz script loaded v2.0.4');
+    console.log('Quiz script loaded v2.0.5');
     
     // Quiz state
     let quizData = null;
@@ -33,47 +33,30 @@ document.addEventListener('DOMContentLoaded', function() {
     const lastNameInput = document.getElementById('lastName');
     const startQuizButton = document.getElementById('startquizbtn');
     
-    console.log('Form elements:', {
-        firstNameInput: firstNameInput,
-        lastNameInput: lastNameInput,
-        startQuizButton: startQuizButton
+    // Find question elements
+    const numberBtn = document.getElementById('numberbtn');
+    const southHandBox = document.getElementById('southhandBox');
+    const biddingBox = document.getElementById('biddingBox');
+    const optionsBox = document.getElementById('optionsBox');
+    const seeAnswerButton = document.querySelector('#questionbox button');
+    
+    // Find answer elements
+    const nextQuestionButtonCorrect = document.querySelector('#correctBox button');
+    const nextQuestionButtonWrong = document.querySelector('#wrongBox button');
+    
+    // Find leaderboard elements
+    const leaderboardTable = document.querySelector('#leaderboard table');
+    const finishQuizButton = document.querySelector('#leaderboard button');
+    
+    console.log('Found elements:', {
+        numberBtn,
+        southHandBox,
+        biddingBox,
+        optionsBox,
+        seeAnswerButton,
+        nextQuestionButtonCorrect,
+        nextQuestionButtonWrong
     });
-    
-    // Find question elements if questionbox exists
-    let questionNumberElement, questionHandElement, biddingBoxElement, 
-        optionAElement, optionBElement, optionCElement, seeAnswerButton;
-    
-    if (modules.questionbox) {
-        questionNumberElement = modules.questionbox.querySelector('h2, h3, h4, h5, h6');
-        questionHandElement = modules.questionbox.querySelector('div:contains("South holds")');
-        biddingBoxElement = modules.questionbox.querySelector('div:contains("West")');
-        optionAElement = modules.questionbox.querySelector('div:contains("option a")');
-        optionBElement = modules.questionbox.querySelector('div:contains("option b")');
-        optionCElement = modules.questionbox.querySelector('div:contains("option c")');
-        seeAnswerButton = modules.questionbox.querySelector('button');
-    }
-    
-    // Find answer elements if answer modules exist
-    let solutionTextCorrect, nextQuestionButtonCorrect, 
-        solutionTextIncorrect, nextQuestionButtonIncorrect;
-    
-    if (modules.correctBox) {
-        solutionTextCorrect = modules.correctBox.querySelector('div:contains("solution")');
-        nextQuestionButtonCorrect = modules.correctBox.querySelector('button');
-    }
-    
-    if (modules.wrongBox) {
-        solutionTextIncorrect = modules.wrongBox.querySelector('div:contains("solution")');
-        nextQuestionButtonIncorrect = modules.wrongBox.querySelector('button');
-    }
-    
-    // Find leaderboard elements if leaderboard exists
-    let leaderboardTable, finishQuizButton;
-    
-    if (modules.leaderboard) {
-        leaderboardTable = modules.leaderboard.querySelector('table');
-        finishQuizButton = modules.leaderboard.querySelector('button');
-    }
     
     // Get quiz data from hidden input
     const quizDataInput = document.getElementById('quiz-data');
@@ -118,11 +101,6 @@ document.addEventListener('DOMContentLoaded', function() {
             startQuizButton.addEventListener('click', startQuiz);
         }
         
-        // Add event listeners to answer options
-        if (optionAElement) optionAElement.addEventListener('click', () => selectOption(optionAElement, 'a'));
-        if (optionBElement) optionBElement.addEventListener('click', () => selectOption(optionBElement, 'b'));
-        if (optionCElement) optionCElement.addEventListener('click', () => selectOption(optionCElement, 'c'));
-        
         // Add event listener to see answer button
         if (seeAnswerButton) {
             seeAnswerButton.addEventListener('click', showAnswer);
@@ -133,14 +111,22 @@ document.addEventListener('DOMContentLoaded', function() {
         if (nextQuestionButtonCorrect) {
             nextQuestionButtonCorrect.addEventListener('click', nextQuestion);
         }
-        if (nextQuestionButtonIncorrect) {
-            nextQuestionButtonIncorrect.addEventListener('click', nextQuestion);
+        if (nextQuestionButtonWrong) {
+            nextQuestionButtonWrong.addEventListener('click', nextQuestion);
         }
         
         // Add event listener to finish quiz button
         if (finishQuizButton) {
             finishQuizButton.addEventListener('click', finishQuiz);
         }
+        
+        // Add event listeners to option elements when they're created
+        setupOptionListeners();
+    }
+    
+    // Setup listeners for dynamically created option elements
+    function setupOptionListeners() {
+        // We'll add these when we create the options in showQuestion
     }
     
     // Parse the text format quiz data
@@ -271,45 +257,68 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const question = quizData[index];
         
-        // Update question number
-        if (questionNumberElement) {
-            questionNumberElement.textContent = `Question ${index + 1}`;
+        // Update question number button
+        if (numberBtn) {
+            numberBtn.textContent = `Question ${index + 1}`;
+            console.log('Updated question number button:', numberBtn.textContent);
         }
         
-        // Update South hand with suit symbols
-        if (questionHandElement && question.allHands && question.allHands.south) {
-            questionHandElement.innerHTML = `South holds\n${question.allHands.south}`;
+        // Update South hand with suit symbols in the southhandBox
+        if (southHandBox && question.allHands && question.allHands.south) {
+            southHandBox.innerHTML = question.allHands.south;
+            console.log('Updated South hand box with:', question.allHands.south);
         }
         
         // Update bidding box
-        if (biddingBoxElement && question.bidding) {
-            biddingBoxElement.innerHTML = question.bidding.join('<br>');
+        if (biddingBox && question.bidding) {
+            let biddingHTML = '<table>';
+            question.bidding.forEach(bid => {
+                biddingHTML += `<tr><td>${bid}</td></tr>`;
+            });
+            biddingHTML += '</table>';
+            biddingBox.innerHTML = biddingHTML;
+            console.log('Updated bidding box');
         }
         
-        // Update options
-        if (optionAElement && question.options && question.options.a) {
-            optionAElement.textContent = `option a) ${question.options.a}`;
-            optionAElement.setAttribute('data-option', 'a');
-            optionAElement.style.display = 'block';
-            optionAElement.classList.remove('selected');
-        }
-        
-        if (optionBElement && question.options && question.options.b) {
-            optionBElement.textContent = `option b) ${question.options.b}`;
-            optionBElement.setAttribute('data-option', 'b');
-            optionBElement.style.display = 'block';
-            optionBElement.classList.remove('selected');
-        }
-        
-        if (optionCElement) {
-            if (question.options && question.options.c) {
-                optionCElement.textContent = `option c) ${question.options.c}`;
-                optionCElement.setAttribute('data-option', 'c');
-                optionCElement.style.display = 'block';
-                optionCElement.classList.remove('selected');
-            } else {
-                optionCElement.style.display = 'none';
+        // Update options box
+        if (optionsBox && question.options) {
+            let optionsHTML = '';
+            
+            if (question.options.a) {
+                optionsHTML += `<div class="option" data-option="a">option a) ${question.options.a}</div>`;
             }
+            
+            if (question.options.b) {
+                optionsHTML += `<div class="option" data-option="b">option b) ${question.options.b}</div>`;
+            }
+            
+            if (question.options.c) {
+                optionsHTML += `<div class="option" data-option="c">option c) ${question.options.c}</div>`;
+            }
+            
+            if (question.options.d) {
+                optionsHTML += `<div class="option" data-option="d">option d) ${question.options.d}</div>`;
+            }
+            
+            optionsBox.innerHTML = optionsHTML;
+            console.log('Updated options box');
+            
+            // Add event listeners to the newly created option elements
+            const optionElements = optionsBox.querySelectorAll('.option');
+            optionElements.forEach(option => {
+                option.addEventListener('click', function() {
+                    // Remove selected class from all options
+                    optionElements.forEach(opt => opt.classList.remove('selected'));
+                    
+                    // Add selected class to clicked option
+                    this.classList.add('selected');
+                    
+                    // Enable see answer button
+                    if (seeAnswerButton) {
+                        seeAnswerButton.disabled = false;
+                    }
+                });
+            });
         }
         
         // Disable see answer button until an option is selected
@@ -323,26 +332,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Handle option selection
-    function selectOption(optionElement, optionValue) {
-        // Remove selected class from all options
-        if (optionAElement) optionAElement.classList.remove('selected');
-        if (optionBElement) optionBElement.classList.remove('selected');
-        if (optionCElement) optionCElement.classList.remove('selected');
-        
-        // Add selected class to clicked option
-        optionElement.classList.add('selected');
-        
-        // Enable see answer button
-        if (seeAnswerButton) {
-            seeAnswerButton.disabled = false;
-        }
-    }
-    
     // Show answer based on selected option
     function showAnswer() {
         // Get selected option
-        const selectedOption = modules.questionbox.querySelector('.selected');
+        const selectedOption = optionsBox ? optionsBox.querySelector('.option.selected') : null;
         if (!selectedOption) {
             return;
         }
@@ -377,44 +370,36 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isCorrect) {
             // Show correct answer module
             if (modules.correctBox) {
-                modules.correctBox.style.display = 'block';
-            }
-            
-            // Update solution text
-            if (solutionTextCorrect) {
-                solutionTextCorrect.innerHTML = question.solution;
-            }
-            
-            // Add diamond hand display
-            const diamondHandContainer = modules.correctBox.querySelector('div:empty') || 
-                document.createElement('div');
-            
-            if (diamondHandContainer) {
-                diamondHandContainer.innerHTML = formatDiamondHand(question.allHands);
-                if (!diamondHandContainer.parentNode) {
-                    modules.correctBox.appendChild(diamondHandContainer);
+                // Update solution text
+                const solutionTextCorrect = modules.correctBox.querySelector('div');
+                if (solutionTextCorrect) {
+                    solutionTextCorrect.innerHTML = question.solution;
                 }
+                
+                // Add diamond hand display
+                const diamondHandContainer = document.createElement('div');
+                diamondHandContainer.innerHTML = formatDiamondHand(question.allHands);
+                modules.correctBox.appendChild(diamondHandContainer);
+                
+                // Show the module
+                modules.correctBox.style.display = 'block';
             }
         } else {
             // Show incorrect answer module
             if (modules.wrongBox) {
-                modules.wrongBox.style.display = 'block';
-            }
-            
-            // Update solution text
-            if (solutionTextIncorrect) {
-                solutionTextIncorrect.innerHTML = question.solution;
-            }
-            
-            // Add diamond hand display
-            const diamondHandContainer = modules.wrongBox.querySelector('div:empty') || 
-                document.createElement('div');
-            
-            if (diamondHandContainer) {
-                diamondHandContainer.innerHTML = formatDiamondHand(question.allHands);
-                if (!diamondHandContainer.parentNode) {
-                    modules.wrongBox.appendChild(diamondHandContainer);
+                // Update solution text
+                const solutionTextIncorrect = modules.wrongBox.querySelector('div');
+                if (solutionTextIncorrect) {
+                    solutionTextIncorrect.innerHTML = question.solution;
                 }
+                
+                // Add diamond hand display
+                const diamondHandContainer = document.createElement('div');
+                diamondHandContainer.innerHTML = formatDiamondHand(question.allHands);
+                modules.wrongBox.appendChild(diamondHandContainer);
+                
+                // Show the module
+                modules.wrongBox.style.display = 'block';
             }
         }
     }
@@ -440,6 +425,21 @@ document.addEventListener('DOMContentLoaded', function() {
         // Hide answer modules
         if (modules.correctBox) modules.correctBox.style.display = 'none';
         if (modules.wrongBox) modules.wrongBox.style.display = 'none';
+        
+        // Remove any diamond hand displays that were added
+        if (modules.correctBox) {
+            const diamondHand = modules.correctBox.querySelector('.diamond-hand');
+            if (diamondHand && diamondHand.parentNode) {
+                diamondHand.parentNode.remove();
+            }
+        }
+        
+        if (modules.wrongBox) {
+            const diamondHand = modules.wrongBox.querySelector('.diamond-hand');
+            if (diamondHand && diamondHand.parentNode) {
+                diamondHand.parentNode.remove();
+            }
+        }
         
         // Increment question index
         currentQuestion++;
@@ -566,30 +566,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (modules.leaderboard) modules.leaderboard.style.display = 'none';
     }
     
-    // Helper function to find elements by text content
-    Element.prototype.querySelector = (function(querySelector) {
-        return function(selector) {
-            try {
-                if (selector.includes(':contains(')) {
-                    const match = selector.match(/(.*):contains\("(.*)"\)(.*)/);
-                    if (match) {
-                        const [_, before, text, after] = match;
-                        const elements = this.querySelectorAll(before + after);
-                        for (let i = 0; i < elements.length; i++) {
-                            if (elements[i].textContent.includes(text)) {
-                                return elements[i];
-                            }
-                        }
-                        return null;
-                    }
-                }
-                return querySelector.call(this, selector);
-            } catch (e) {
-                return querySelector.call(this, selector);
-            }
-        };
-    })(Element.prototype.querySelector);
-    
     // Add CSS for diamond hand display
     function addDiamondHandCSS() {
         const style = document.createElement('style');
@@ -630,7 +606,21 @@ document.addEventListener('DOMContentLoaded', function() {
           margin-left: 40px;
         }
         
-        .selected {
+        .option {
+          display: block;
+          margin-bottom: 10px;
+          padding: 10px;
+          background-color: #fff;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+        
+        .option:hover {
+          background-color: #f0f0f0;
+        }
+        
+        .option.selected {
           background-color: #e0f7fa !important;
           border-color: #4CAF50 !important;
         }
