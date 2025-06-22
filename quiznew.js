@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Quiz script loaded v9.0.0 - Elementor Form Fix');
+    console.log('Quiz script loaded v9.1.0 - Elementor Form Fix');
 
     // Quiz state
     let quizData = null;
@@ -35,11 +35,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const lastNameInput = registrationForm ? registrationForm.querySelector('input[name="form_field_name_0"]') : null;
     const startQuizButton = document.getElementById('startquizbtn') || (registrationForm ? registrationForm.querySelector('button[type="submit"]') : null);
 
-    console.log('Registration elements:', {
+    console.log('Registration elements (refined selectors):', {
         form: !!registrationForm,
-        firstName: !!firstNameInput,
-        lastName: !!lastNameInput,
-        startButton: !!startQuizButton
+        firstName: firstNameInput ? firstNameInput.outerHTML : 'Not Found',
+        lastName: lastNameInput ? lastNameInput.outerHTML : 'Not Found',
+        startButton: startQuizButton ? startQuizButton.outerHTML : 'Not Found'
     });
 
     // --- Question Box Module Elements ---
@@ -878,4 +878,8 @@ document.addEventListener('DOMContentLoaded', function() {
         padding: 8px 10px;
         font-size: 14px;
     }
-}
+}  /* Make sure this curly brace is here */
+`;
+document.head.insertAdjacentHTML('beforeend', `<style>${style}</style>`);
+
+initQuiz();
