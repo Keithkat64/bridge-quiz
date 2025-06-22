@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Quiz script loaded v4.0.0 - Custom Registration Form');
+    console.log('Quiz script loaded v5.0.0');
     
     // Quiz state
     let quizData = null;
@@ -12,26 +12,26 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     let selectedOption = null;
     
-    // Find all sections by their IDs
-    const registrationSection = document.getElementById('registration');
-    const questionSection = document.getElementById('questionbox');
-    const correctSection = document.getElementById('correctBox');
-    const incorrectSection = document.getElementById('wrongBox');
-    const leaderboardSection = document.getElementById('leaderboard');
+    // Find all modules by their IDs
+    const registrationModule = document.getElementById('registration');
+    const questionboxModule = document.getElementById('questionbox');
+    const correctBoxModule = document.getElementById('correctBox');
+    const wrongBoxModule = document.getElementById('wrongBox');
+    const leaderboardModule = document.getElementById('leaderboard');
     
-    console.log('Found sections by ID:', {
-        registration: !!registrationSection,
-        question: !!questionSection,
-        correct: !!correctSection,
-        incorrect: !!incorrectSection,
-        leaderboard: !!leaderboardSection
+    console.log('Found modules by ID:', {
+        registration: !!registrationModule,
+        questionbox: !!questionboxModule,
+        correctBox: !!correctBoxModule,
+        wrongBox: !!wrongBoxModule,
+        leaderboard: !!leaderboardModule
     });
     
-    // Find form elements in the custom registration form
-    const registrationForm = document.getElementById('quiz-registration-form');
+    // Find form elements in the registration form
+    const registrationForm = document.querySelector('#registration form') || document.querySelector('#quiz-registration-form');
     const firstNameInput = document.getElementById('firstName');
     const lastNameInput = document.getElementById('lastName');
-    const startQuizButton = document.getElementById('startquizbtn');
+    const startQuizButton = document.getElementById('startquizbtn') || document.querySelector('#registration button');
     
     console.log('Found form elements:', {
         form: !!registrationForm,
@@ -41,23 +41,24 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Find question elements
-    const questionNumberButton = questionSection ? questionSection.querySelector('button') : null;
-    const southHandDiv = questionSection ? questionSection.querySelector('div:contains("South holds")') : null;
-    const biddingDiv = questionSection ? questionSection.querySelector('div:contains("West")') : null;
-    const optionA = questionSection ? questionSection.querySelector('div:contains("A")') : null;
-    const optionB = questionSection ? questionSection.querySelector('div:contains("B")') : null;
-    const optionC = questionSection ? questionSection.querySelector('div:contains("C")') : null;
-    const seeAnswerButton = questionSection ? questionSection.querySelector('button:contains("See")') : null;
+    const questionNumberField = document.getElementById('numberbtn');
+    const southHandBox = document.getElementById('southhandBox');
+    const biddingBox = document.getElementById('biddingBox');
+    const optionsBox = document.getElementById('optionsBox');
+    const optionA = document.querySelector('#option-a') || document.querySelector('.option-btn:nth-child(1)');
+    const optionB = document.querySelector('#option-b') || document.querySelector('.option-btn:nth-child(2)');
+    const optionC = document.querySelector('#option-c') || document.querySelector('.option-btn:nth-child(3)');
+    const seeAnswerButton = document.querySelector('#see-answer') || document.querySelector('#questionbox button');
     
     // Find solution elements
-    const correctSolutionDiv = correctSection ? correctSection.querySelector('div:nth-of-type(1)') : null;
-    const incorrectSolutionDiv = incorrectSection ? incorrectSection.querySelector('div:nth-of-type(1)') : null;
-    const nextButtonCorrect = correctSection ? correctSection.querySelector('button') : null;
-    const nextButtonIncorrect = incorrectSection ? incorrectSection.querySelector('button') : null;
+    const correctSolutionDiv = correctBoxModule ? correctBoxModule.querySelector('.solution-text') : null;
+    const incorrectSolutionDiv = wrongBoxModule ? wrongBoxModule.querySelector('.solution-text') : null;
+    const nextButtonCorrect = correctBoxModule ? correctBoxModule.querySelector('button') : null;
+    const nextButtonIncorrect = wrongBoxModule ? wrongBoxModule.querySelector('button') : null;
     
     // Find leaderboard elements
-    const leaderboardTable = leaderboardSection ? leaderboardSection.querySelector('table') : null;
-    const finishButton = leaderboardSection ? leaderboardSection.querySelector('button') : null;
+    const leaderboardTable = leaderboardModule ? leaderboardModule.querySelector('table tbody') : null;
+    const finishButton = leaderboardModule ? leaderboardModule.querySelector('button') : null;
     
     // Get quiz data
     const quizDataInput = document.getElementById('quiz-data');
@@ -75,10 +76,10 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Hide all sections except registration
-        hideAllSections();
-        if (registrationSection) {
-            registrationSection.style.display = 'block';
+        // Hide all modules except registration
+        hideAllModules();
+        if (registrationModule) {
+            registrationModule.style.display = 'block';
         }
         
         // Set up form submission
@@ -87,6 +88,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 e.preventDefault();
                 startQuiz();
             });
+        }
+        
+        // Set up name input validation
+        if (firstNameInput && lastNameInput && startQuizButton) {
+            function checkInputs() {
+                if (firstNameInput.value.trim() !== '' && lastNameInput.value.trim() !== '') {
+                    startQuizButton.disabled = false;
+                    startQuizButton.style.display = 'block';
+                } else {
+                    startQuizButton.disabled = true;
+                    startQuizButton.style.display = 'none';
+                }
+            }
+            
+            firstNameInput.addEventListener('input', checkInputs);
+            lastNameInput.addEventListener('input', checkInputs);
+            
+            // Initial check
+            checkInputs();
+        }
+        
+        // Add event listener to start quiz button if not part of a form
+        if (startQuizButton && !registrationForm) {
+            startQuizButton.addEventListener('click', startQuiz);
         }
         
         // Add event listeners to options
@@ -126,9 +151,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (finishButton) {
             finishButton.addEventListener('click', finishQuiz);
         }
-        
-        // Add CSS for diamond hand display
-        addDiamondHandCSS();
     }
     
     // Parse quiz data
@@ -237,7 +259,7 @@ document.addEventListener('DOMContentLoaded', function() {
         userAnswers = [];
         
         // Hide registration and show first question
-        hideAllSections();
+        hideAllModules();
         showQuestion(currentQuestion);
     }
     
@@ -250,40 +272,56 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const question = quizData[index];
         
-        // Update question number button
-        if (questionNumberButton) {
-            questionNumberButton.textContent = `Question ${index + 1}`;
-            console.log('Updated question number button to:', `Question ${index + 1}`);
+        // Update question number field
+        if (questionNumberField) {
+            questionNumberField.textContent = `Question ${index + 1}`;
+            console.log('Updated question number field to:', `Question ${index + 1}`);
         }
         
         // Update South hand
-        if (southHandDiv && question.allHands && question.allHands.south) {
-            southHandDiv.innerHTML = `South holds<br>${question.allHands.south.replace(/\n/g, '<br>')}`;
+        if (southHandBox && question.allHands && question.allHands.south) {
+            southHandBox.innerHTML = formatSouthHand(question.allHands.south);
         }
         
-        // Update bidding
-        if (biddingDiv && question.bidding) {
-            biddingDiv.innerHTML = question.bidding.join('<br>');
+        // Update bidding box
+        if (biddingBox && question.bidding) {
+            biddingBox.innerHTML = formatBidding(question.bidding);
         }
         
         // Update options
-        if (optionA && question.options && question.options.a) {
-            optionA.textContent = `option a) ${question.options.a}`;
-            optionA.classList.remove('selected');
-        }
-        
-        if (optionB && question.options && question.options.b) {
-            optionB.textContent = `option b) ${question.options.b}`;
-            optionB.classList.remove('selected');
-        }
-        
-        if (optionC) {
-            if (question.options && question.options.c) {
-                optionC.textContent = `option c) ${question.options.c}`;
-                optionC.style.display = 'block';
-                optionC.classList.remove('selected');
-            } else {
-                optionC.style.display = 'none';
+        if (optionsBox) {
+            optionsBox.innerHTML = formatOptions(question.options);
+            
+            // Re-add event listeners to the new option elements
+            const newOptionA = document.querySelector('#option-a') || document.querySelector('.option-btn:nth-child(1)');
+            const newOptionB = document.querySelector('#option-b') || document.querySelector('.option-btn:nth-child(2)');
+            const newOptionC = document.querySelector('#option-c') || document.querySelector('.option-btn:nth-child(3)');
+            
+            if (newOptionA) newOptionA.addEventListener('click', () => selectOption('a', newOptionA));
+            if (newOptionB) newOptionB.addEventListener('click', () => selectOption('b', newOptionB));
+            if (newOptionC) newOptionC.addEventListener('click', () => selectOption('c', newOptionC));
+        } else if (optionA && optionB) {
+            // If we don't have optionsBox but have individual options
+            if (optionA && question.options && question.options.a) {
+                optionA.textContent = `option a) ${question.options.a}`;
+                optionA.classList.remove('selected');
+                optionA.style.display = 'block';
+            }
+            
+            if (optionB && question.options && question.options.b) {
+                optionB.textContent = `option b) ${question.options.b}`;
+                optionB.classList.remove('selected');
+                optionB.style.display = 'block';
+            }
+            
+            if (optionC) {
+                if (question.options && question.options.c) {
+                    optionC.textContent = `option c) ${question.options.c}`;
+                    optionC.classList.remove('selected');
+                    optionC.style.display = 'block';
+                } else {
+                    optionC.style.display = 'none';
+                }
             }
         }
         
@@ -295,16 +333,98 @@ document.addEventListener('DOMContentLoaded', function() {
             seeAnswerButton.disabled = true;
         }
         
-        // Show question section
-        questionSection.style.display = 'block';
+        // Show question module
+        if (questionboxModule) {
+            questionboxModule.style.display = 'block';
+        }
+    }
+    
+    // Format South hand with suit symbols
+    function formatSouthHand(handText) {
+        if (!handText) return '';
+        
+        const lines = handText.split('\n');
+        let html = 'South holds<br>';
+        
+        lines.forEach(line => {
+            const parts = line.split(' ');
+            if (parts.length >= 2) {
+                const suit = parts[0];
+                const cards = parts.slice(1).join(' ');
+                
+                let suitClass = 'spades';
+                if (suit === '♥') suitClass = 'hearts';
+                if (suit === '♦') suitClass = 'diamonds';
+                if (suit === '♣') suitClass = 'clubs';
+                
+                html += `<span class="${suitClass}">${suit}</span> <span class="cards">${cards}</span><br>`;
+            } else {
+                html += line + '<br>';
+            }
+        });
+        
+        return html;
+    }
+    
+    // Format bidding as a table
+    function formatBidding(bidding) {
+        if (!bidding || bidding.length === 0) return '';
+        
+        let html = '<table class="bidding-table"><tr><th>West</th><th>North</th><th>East</th><th>South</th></tr>';
+        
+        // Process each bidding line
+        bidding.forEach(line => {
+            const bids = line.split('-').map(bid => bid.trim());
+            if (bids.length === 4) {
+                html += `<tr><td>${bids[0]}</td><td>${bids[1]}</td><td>${bids[2]}</td><td>${bids[3]}</td></tr>`;
+            }
+        });
+        
+        html += '</table>';
+        return html;
+    }
+    
+    // Format options with letter circles
+    function formatOptions(options) {
+        if (!options) return '';
+        
+        let html = '';
+        
+        if (options.a) {
+            html += `
+                <div id="option-a" class="option-btn">
+                    <span class="option-letter">A</span>
+                    <span class="option-text">option a) ${options.a}</span>
+                </div>
+            `;
+        }
+        
+        if (options.b) {
+            html += `
+                <div id="option-b" class="option-btn">
+                    <span class="option-letter">B</span>
+                    <span class="option-text">option b) ${options.b}</span>
+                </div>
+            `;
+        }
+        
+        if (options.c) {
+            html += `
+                <div id="option-c" class="option-btn">
+                    <span class="option-letter">C</span>
+                    <span class="option-text">option c) ${options.c}</span>
+                </div>
+            `;
+        }
+        
+        return html;
     }
     
     // Select an option
     function selectOption(option, element) {
         // Remove selected class from all options
-        if (optionA) optionA.classList.remove('selected');
-        if (optionB) optionB.classList.remove('selected');
-        if (optionC) optionC.classList.remove('selected');
+        const allOptions = document.querySelectorAll('.option-btn');
+        allOptions.forEach(opt => opt.classList.remove('selected'));
         
         // Add selected class to clicked option
         element.classList.add('selected');
@@ -320,17 +440,37 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Show answer
     function showAnswer() {
-        if (!selectedOption) {
+        // Get selected option
+        const selectedElement = document.querySelector('.option-btn.selected');
+        if (!selectedElement) {
+            return;
+        }
+        
+        // Get option value from the element
+        let selectedValue;
+        if (selectedElement.id === 'option-a') {
+            selectedValue = 'a';
+        } else if (selectedElement.id === 'option-b') {
+            selectedValue = 'b';
+        } else if (selectedElement.id === 'option-c') {
+            selectedValue = 'c';
+        } else {
+            // Try to get from data attribute
+            selectedValue = selectedElement.getAttribute('data-option');
+        }
+        
+        if (!selectedValue) {
+            console.error('Could not determine selected option value');
             return;
         }
         
         const question = quizData[currentQuestion];
-        const isCorrect = selectedOption === question.correctAnswer;
+        const isCorrect = selectedValue === question.correctAnswer;
         
         // Save answer
         userAnswers.push({
             question: currentQuestion,
-            answer: selectedOption,
+            answer: selectedValue,
             correct: isCorrect
         });
         
@@ -339,10 +479,12 @@ document.addEventListener('DOMContentLoaded', function() {
             userScore++;
         }
         
-        // Hide question section
-        questionSection.style.display = 'none';
+        // Hide question module
+        if (questionboxModule) {
+            questionboxModule.style.display = 'none';
+        }
         
-        // Show appropriate answer section
+        // Show appropriate answer module
         if (isCorrect) {
             // Update solution text
             if (correctSolutionDiv) {
@@ -351,12 +493,25 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Add diamond hand display
             const diamondHandContainer = document.createElement('div');
+            diamondHandContainer.className = 'diamond-display';
             diamondHandContainer.innerHTML = formatDiamondHand(question.allHands);
-            diamondHandContainer.className = 'diamond-hand-container';
-            correctSection.appendChild(diamondHandContainer);
             
-            // Show correct section
-            correctSection.style.display = 'block';
+            // Check if there's already a diamond display
+            const existingDisplay = correctBoxModule.querySelector('.diamond-display');
+            if (existingDisplay) {
+                existingDisplay.innerHTML = diamondHandContainer.innerHTML;
+            } else {
+                // Insert before the button
+                const button = correctBoxModule.querySelector('button');
+                if (button) {
+                    correctBoxModule.insertBefore(diamondHandContainer, button);
+                } else {
+                    correctBoxModule.appendChild(diamondHandContainer);
+                }
+            }
+            
+            // Show correct module
+            correctBoxModule.style.display = 'block';
         } else {
             // Update solution text
             if (incorrectSolutionDiv) {
@@ -365,12 +520,25 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Add diamond hand display
             const diamondHandContainer = document.createElement('div');
+            diamondHandContainer.className = 'diamond-display';
             diamondHandContainer.innerHTML = formatDiamondHand(question.allHands);
-            diamondHandContainer.className = 'diamond-hand-container';
-            incorrectSection.appendChild(diamondHandContainer);
             
-            // Show incorrect section
-            incorrectSection.style.display = 'block';
+            // Check if there's already a diamond display
+            const existingDisplay = wrongBoxModule.querySelector('.diamond-display');
+            if (existingDisplay) {
+                existingDisplay.innerHTML = diamondHandContainer.innerHTML;
+            } else {
+                // Insert before the button
+                const button = wrongBoxModule.querySelector('button');
+                if (button) {
+                    wrongBoxModule.insertBefore(diamondHandContainer, button);
+                } else {
+                    wrongBoxModule.appendChild(diamondHandContainer);
+                }
+            }
+            
+            // Show incorrect module
+            wrongBoxModule.style.display = 'block';
         }
     }
     
@@ -380,24 +548,55 @@ document.addEventListener('DOMContentLoaded', function() {
         
         return `
             <div class="diamond-hand">
-                <div class="north">${hands.north ? hands.north.replace(/\n/g, '<br>') : ''}</div>
-                <div class="hand-middle">
-                    <div class="west">${hands.west ? hands.west.replace(/\n/g, '<br>') : ''}</div>
-                    <div class="east">${hands.east ? hands.east.replace(/\n/g, '<br>') : ''}</div>
+                <div class="hand-label north-label">North</div>
+                <div class="hand-container north">
+                    <span class="spades">♠</span> <span class="cards">${formatCards(hands.north.split('\n')[0].split(' ').slice(1).join(' '))}</span><br>
+                    <span class="hearts">♥</span> <span class="cards">${formatCards(hands.north.split('\n')[1].split(' ').slice(1).join(' '))}</span><br>
+                    <span class="diamonds">♦</span> <span class="cards">${formatCards(hands.north.split('\n')[2].split(' ').slice(1).join(' '))}</span><br>
+                    <span class="clubs">♣</span> <span class="cards">${formatCards(hands.north.split('\n')[3].split(' ').slice(1).join(' '))}</span>
                 </div>
-                <div class="south">${hands.south ? hands.south.replace(/\n/g, '<br>') : ''}</div>
+                <div class="hand-middle">
+                    <div class="west-container">
+                        <div class="hand-label west-label">West</div>
+                        <div class="hand-container west">
+                            <span class="spades">♠</span> <span class="cards">${formatCards(hands.west.split('\n')[0].split(' ').slice(1).join(' '))}</span><br>
+                            <span class="hearts">♥</span> <span class="cards">${formatCards(hands.west.split('\n')[1].split(' ').slice(1).join(' '))}</span><br>
+                            <span class="diamonds">♦</span> <span class="cards">${formatCards(hands.west.split('\n')[2].split(' ').slice(1).join(' '))}</span><br>
+                            <span class="clubs">♣</span> <span class="cards">${formatCards(hands.west.split('\n')[3].split(' ').slice(1).join(' '))}</span>
+                        </div>
+                    </div>
+                    <div class="east-container">
+                        <div class="hand-label east-label">East</div>
+                        <div class="hand-container east">
+                            <span class="spades">♠</span> <span class="cards">${formatCards(hands.east.split('\n')[0].split(' ').slice(1).join(' '))}</span><br>
+                            <span class="hearts">♥</span> <span class="cards">${formatCards(hands.east.split('\n')[1].split(' ').slice(1).join(' '))}</span><br>
+                            <span class="diamonds">♦</span> <span class="cards">${formatCards(hands.east.split('\n')[2].split(' ').slice(1).join(' '))}</span><br>
+                            <span class="clubs">♣</span> <span class="cards">${formatCards(hands.east.split('\n')[3].split(' ').slice(1).join(' '))}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="hand-label south-label">South</div>
+                <div class="hand-container south">
+                    <span class="spades">♠</span> <span class="cards">${formatCards(hands.south.split('\n')[0].split(' ').slice(1).join(' '))}</span><br>
+                    <span class="hearts">♥</span> <span class="cards">${formatCards(hands.south.split('\n')[1].split(' ').slice(1).join(' '))}</span><br>
+                    <span class="diamonds">♦</span> <span class="cards">${formatCards(hands.south.split('\n')[2].split(' ').slice(1).join(' '))}</span><br>
+                    <span class="clubs">♣</span> <span class="cards">${formatCards(hands.south.split('\n')[3].split(' ').slice(1).join(' '))}</span>
+                </div>
             </div>
         `;
     }
     
+    // Format cards with spacing
+    function formatCards(cards) {
+        if (!cards) return '';
+        return cards.split('').join(' ');
+    }
+    
     // Go to next question
     function nextQuestion() {
-        // Hide answer sections
-        if (correctSection) correctSection.style.display = 'none';
-        if (incorrectSection) incorrectSection.style.display = 'none';
-        
-        // Remove diamond hand displays
-        document.querySelectorAll('.diamond-hand-container').forEach(el => el.remove());
+        // Hide answer modules
+        if (correctBoxModule) correctBoxModule.style.display = 'none';
+        if (wrongBoxModule) wrongBoxModule.style.display = 'none';
         
         // Increment question index
         currentQuestion++;
@@ -412,7 +611,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Show leaderboard
     function showLeaderboard() {
-        hideAllSections();
+        hideAllModules();
         
         // Save score
         const userFullName = `${userInfo.firstName} ${userInfo.lastName}`;
@@ -421,9 +620,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update leaderboard display
         updateLeaderboardDisplay();
         
-        // Show leaderboard section
-        if (leaderboardSection) {
-            leaderboardSection.style.display = 'block';
+        // Show leaderboard module
+        if (leaderboardModule) {
+            leaderboardModule.style.display = 'block';
         }
     }
     
@@ -453,8 +652,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Add score rows
         scores.forEach((score, index) => {
+            const rowClass = index % 2 === 0 ? '' : 'alternate-row';
             tableHTML += `
-                <tr>
+                <tr class="${rowClass} filled-row">
                     <td>${index + 1}</td>
                     <td>${score.name}</td>
                     <td>${score.score}</td>
@@ -464,8 +664,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Fill remaining rows
         for (let i = scores.length; i < 10; i++) {
+            const rowClass = i % 2 === 0 ? '' : 'alternate-row';
             tableHTML += `
-                <tr>
+                <tr class="${rowClass}">
                     <td>${i + 1}</td>
                     <td></td>
                     <td></td>
@@ -479,7 +680,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Finish quiz
     function finishQuiz() {
-        hideAllSections();
+        hideAllModules();
         
         // Clear inputs
         if (firstNameInput) firstNameInput.value = '';
@@ -487,58 +688,45 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Hide start button again
         if (startQuizButton) {
+            startQuizButton.disabled = true;
             startQuizButton.style.display = 'none';
         }
         
-        // Show registration section
-        if (registrationSection) {
-            registrationSection.style.display = 'block';
+        // Show registration module
+        if (registrationModule) {
+            registrationModule.style.display = 'block';
         }
     }
     
-    // Hide all sections
-    function hideAllSections() {
-        if (registrationSection) registrationSection.style.display = 'none';
-        if (questionSection) questionSection.style.display = 'none';
-        if (correctSection) correctSection.style.display = 'none';
-        if (incorrectSection) incorrectSection.style.display = 'none';
-        if (leaderboardSection) leaderboardSection.style.display = 'none';
+    // Hide all modules
+    function hideAllModules() {
+        if (registrationModule) registrationModule.style.display = 'none';
+        if (questionboxModule) questionboxModule.style.display = 'none';
+        if (correctBoxModule) correctBoxModule.style.display = 'none';
+        if (wrongBoxModule) wrongBoxModule.style.display = 'none';
+        if (leaderboardModule) leaderboardModule.style.display = 'none';
     }
     
-    // Helper function to find elements by text content
-    Element.prototype.querySelector = (function(querySelector) {
-        return function(selector) {
-            try {
-                if (selector.includes(':contains(')) {
-                    const match = selector.match(/(.*):contains\("(.*)"\)(.*)/);
-                    if (match) {
-                        const [_, before, text, after] = match;
-                        const elements = this.querySelectorAll(before + after);
-                        for (let i = 0; i < elements.length; i++) {
-                            if (elements[i].textContent.includes(text)) {
-                                return elements[i];
-                            }
-                        }
-                        return null;
-                    }
-                }
-                return querySelector.call(this, selector);
-            } catch (e) {
-                return querySelector.call(this, selector);
-            }
-        };
-    })(Element.prototype.querySelector);
-    
-    // Add CSS for diamond hand display
-    function addDiamondHandCSS() {
+    // Add CSS for styling
+    function addQuizCSS() {
         const style = document.createElement('style');
         style.textContent = `
-        .diamond-hand {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          margin: 20px 0;
-          font-family: monospace;
+        .hand-label {
+          font-family: 'Open Sans', sans-serif;
+          font-size: 20px;
+          font-weight: 800;
+          padding-bottom: 2px;
+          text-align: center;
+          margin-bottom: 0;
+        }
+        
+        .hand-container {
+          min-width: 180px;
+          padding: 8px 12px;
+          border: 1px solid #e0e0e0;
+          border-radius: 5px;
+          background-color: #f9f9f9;
+          line-height: 1.2;
         }
         
         .hand-middle {
@@ -546,35 +734,80 @@ document.addEventListener('DOMContentLoaded', function() {
           justify-content: space-between;
           width: 100%;
           margin: 10px 0;
+          gap: 40px;
         }
         
-        .north, .south, .west, .east {
-          padding: 10px;
-          border: 1px solid #ddd;
-          border-radius: 5px;
-          background-color: #f9f9f9;
-          min-width: 120px;
+        .west-container, .east-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
         }
         
-        .north, .south {
-          text-align: center;
+        .spades, .clubs {
+          color: black;
         }
         
-        .west {
-          margin-right: 40px;
+        .hearts, .diamonds {
+          color: red;
         }
         
-        .east {
-          margin-left: 40px;
+        .cards {
+          letter-spacing: 2px;
         }
         
-        .selected {
-          background-color: #e0f7fa !important;
-          border-color: #4CAF50 !important;
+        .option-btn {
+          display: flex;
+          align-items: center;
+          background-color: #f5f5f0;
+          border: 1px solid #e0e0d5;
+          border-radius: 8px;
+          padding: 12px 15px;
+          cursor: pointer;
+          transition: all 0.2s;
+          margin-bottom: 10px;
+        }
+        
+        .option-btn:hover {
+          background-color: #f0f0e8;
+          border-color: #d0d0c8;
+        }
+        
+        .option-btn.selected {
+          background-color: #e0f7fa;
+          border-color: #4CAF50;
+        }
+        
+        .option-letter {
+          background-color: #4CA6A8;
+          color: white;
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+          margin-right: 12px;
+          font-size: 14px;
+        }
+        
+        .option-text {
+          font-size: 16px;
+        }
+        
+        .diamond-hand {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          font-family: 'Open Sans', sans-serif;
+          font-size: 16px;
         }
         `;
         document.head.appendChild(style);
     }
+    
+    // Add CSS
+    addQuizCSS();
     
     // Initialize the quiz
     initQuiz();
