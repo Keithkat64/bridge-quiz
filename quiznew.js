@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Quiz script loaded v2.0.5');
+    console.log('Quiz script loaded v2.0.6 - Elementor Form Compatible');
     
     // Quiz state
     let quizData = null;
@@ -22,16 +22,41 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('Found modules:', modules);
     
-    // Check if modules exist
-    if (!modules.registration) {
-        console.error('Registration module not found');
-        return;
+    // Find Elementor form
+    const elementorForm = document.querySelector('form.elementor-form[name="quizreg"]');
+    console.log('Found Elementor form:', elementorForm);
+    
+    // Find form elements using Elementor's structure
+    let firstNameInput, lastNameInput, startQuizButton;
+    
+    if (elementorForm) {
+        // Elementor forms use .elementor-field-group elements
+        const fieldGroups = elementorForm.querySelectorAll('.elementor-field-group');
+        
+        // First field group should contain the first name input
+        if (fieldGroups.length > 0) {
+            firstNameInput = fieldGroups[0].querySelector('input');
+        }
+        
+        // Second field group should contain the last name input
+        if (fieldGroups.length > 1) {
+            lastNameInput = fieldGroups[1].querySelector('input');
+        }
+        
+        // The submit button is usually in a .elementor-field-type-submit group
+        startQuizButton = elementorForm.querySelector('.elementor-field-type-submit button');
+        
+        // If we can't find the button that way, try other selectors
+        if (!startQuizButton) {
+            startQuizButton = elementorForm.querySelector('button[type="submit"]');
+        }
     }
     
-    // Find form elements
-    const firstNameInput = document.getElementById('firstName');
-    const lastNameInput = document.getElementById('lastName');
-    const startQuizButton = document.getElementById('startquizbtn');
+    console.log('Form elements:', {
+        firstNameInput: firstNameInput,
+        lastNameInput: lastNameInput,
+        startQuizButton: startQuizButton
+    });
     
     // Find question elements
     const numberBtn = document.getElementById('numberbtn');
@@ -47,16 +72,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Find leaderboard elements
     const leaderboardTable = document.querySelector('#leaderboard table');
     const finishQuizButton = document.querySelector('#leaderboard button');
-    
-    console.log('Found elements:', {
-        numberBtn,
-        southHandBox,
-        biddingBox,
-        optionsBox,
-        seeAnswerButton,
-        nextQuestionButtonCorrect,
-        nextQuestionButtonWrong
-    });
     
     // Get quiz data from hidden input
     const quizDataInput = document.getElementById('quiz-data');
@@ -80,25 +95,38 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Set up form validation and button visibility
-        if (firstNameInput && lastNameInput && startQuizButton) {
-            // Initially hide the button
+        if (elementorForm && startQuizButton) {
+            // Initially hide the button or disable it
             startQuizButton.style.display = 'none';
             
             // Function to check if both inputs have values
             function checkInputs() {
-                if (firstNameInput.value.trim() !== '' && lastNameInput.value.trim() !== '') {
+                const firstName = firstNameInput ? firstNameInput.value.trim() : '';
+                const lastName = lastNameInput ? lastNameInput.value.trim() : '';
+                
+                if (firstName !== '' && lastName !== '') {
                     startQuizButton.style.display = 'block';
                 } else {
                     startQuizButton.style.display = 'none';
                 }
             }
             
-            // Add event listeners
-            firstNameInput.addEventListener('input', checkInputs);
-            lastNameInput.addEventListener('input', checkInputs);
+            // Add event listeners to inputs if they exist
+            if (firstNameInput) {
+                firstNameInput.addEventListener('input', checkInputs);
+            }
             
-            // Add event listener to start quiz button
-            startQuizButton.addEventListener('click', startQuiz);
+            if (lastNameInput) {
+                lastNameInput.addEventListener('input', checkInputs);
+            }
+            
+            // Prevent form submission and handle quiz start
+            elementorForm.addEventListener('submit', function(e) {
+                e.preventDefault(); // Prevent the form from actually submitting
+                
+                // Start the quiz
+                startQuiz();
+            });
         }
         
         // Add event listener to see answer button
@@ -119,14 +147,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (finishQuizButton) {
             finishQuizButton.addEventListener('click', finishQuiz);
         }
-        
-        // Add event listeners to option elements when they're created
-        setupOptionListeners();
-    }
-    
-    // Setup listeners for dynamically created option elements
-    function setupOptionListeners() {
-        // We'll add these when we create the options in showQuestion
     }
     
     // Parse the text format quiz data
@@ -224,14 +244,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Start the quiz
     function startQuiz() {
-        // Save user info
-        if (firstNameInput && lastNameInput) {
-            userInfo.firstName = firstNameInput.value.trim();
-            userInfo.lastName = lastNameInput.value.trim();
-        } else if (window.quizUserInfo) {
-            // Get user info from global variable if available
-            userInfo = window.quizUserInfo;
-        }
+        // Save user info from form inputs
+        userInfo.firstName = firstNameInput ? firstNameInput.value.trim() : 'Guest';
+        userInfo.lastName = lastNameInput ? lastNameInput.value.trim() : '';
         
         console.log('Starting quiz for:', userInfo.firstName, userInfo.lastName);
         
@@ -244,9 +259,6 @@ document.addEventListener('DOMContentLoaded', function() {
         hideAllModules();
         showQuestion(currentQuestion);
     }
-    
-    // Make startQuiz function available globally
-    window.startQuiz = startQuiz;
     
     // Show a specific question
     function showQuestion(index) {
@@ -542,11 +554,11 @@ document.addEventListener('DOMContentLoaded', function() {
     function finishQuiz() {
         hideAllModules();
         
-        // Clear inputs
+        // Clear inputs if they exist
         if (firstNameInput) firstNameInput.value = '';
         if (lastNameInput) lastNameInput.value = '';
         
-        // Hide start button again
+        // Hide start button again if it exists
         if (startQuizButton) {
             startQuizButton.style.display = 'none';
         }
