@@ -1,9 +1,9 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Quiz script loaded v11.0.0 - Hardcoded Data & Complete');
+    console.log('Quiz script loaded v11.1.0 - Reads Data Directly from JS');
 
     // --- HARDCODED QUIZ DATA ---
     // This data is now directly in the JavaScript file.
-    // Remove the <input type="hidden" id="quiz-data" ...> from your HTML.
+    // REMOVE THE <input type="hidden" id="quiz-data" ...> FROM YOUR HTML.
     const quizRawData = `Hand 1:
 
 Cards:
@@ -410,7 +410,7 @@ South bids b) 3H. This shows 5 spades and 4 hearts and offers West a choice of 3
 
     // --- Module Element References ---
     // Find modules by their unique heading text. This is more reliable for Elementor.
-    const registrationModule = findModuleByHeadingText('Quiz Registration');
+    const registrationModule = findModuleByHeadingText('Quiz registration');
     const questionboxModule = findModuleByHeadingText('Question 1'); // Initial heading for question module
     const correctBoxModule = findModuleByHeadingText('✅Correct');
     const wrongBoxModule = findModuleByHeadingText('❌Incorrect');
@@ -426,8 +426,8 @@ South bids b) 3H. This shows 5 spades and 4 hearts and offers West a choice of 3
 
     // --- Registration Module Elements (still referenced for hiding, but not for input) ---
     const registrationForm = registrationModule ? registrationModule.querySelector('form') : null;
-    const firstNameInput = registrationForm ? registrationForm.querySelector('input[name="form_field_name"]') : null; // Elementor default name
-    const lastNameInput = registrationForm ? registrationForm.querySelector('input[name="form_field_name_0"]') : null; // Elementor default name
+    const firstNameInput = registrationForm ? registrationForm.querySelector('input[name="form_field_name"]') : null;
+    const lastNameInput = registrationForm ? registrationForm.querySelector('input[name="form_field_name_0"]') : null;
     const startQuizButton = registrationForm ? registrationForm.querySelector('button[type="submit"]') : null;
 
     console.log('Registration elements (for hiding/showing):', {
@@ -955,7 +955,7 @@ South bids b) 3H. This shows 5 spades and 4 hearts and offers West a choice of 3
         .bidding-box {
             padding: 15px 0;
         }
-        .bidding-table {
+                .bidding-table {
             width: 100%;
             border-collapse: collapse;
             border: 1px solid #4CA6A8;
