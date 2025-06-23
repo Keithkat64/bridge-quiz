@@ -1,9 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Quiz script loaded v11.1.0 - Reads Data Directly from JS');
+    console.log('Quiz script loaded v12.0.0 - Fixed Module Detection');
 
     // --- HARDCODED QUIZ DATA ---
-    // This data is now directly in the JavaScript file.
-    // REMOVE THE <input type="hidden" id="quiz-data" ...> FROM YOUR HTML.
     const quizRawData = `Hand 1:
 
 Cards:
@@ -398,23 +396,47 @@ South bids b) 3H. This shows 5 spades and 4 hearts and offers West a choice of 3
 ----------------------------------------`;
 
     // Quiz state
-    let quizData = null; // Will be populated from quizRawData
+    let quizData = null;
     let currentQuestion = 0;
     let userScore = 0;
     let userAnswers = [];
-    let userInfo = { // Simplified as no registration form
+    let userInfo = {
         firstName: 'Guest',
         lastName: 'Player'
     };
-    let selectedOption = null; // Stores the selected option (e.g., 'a', 'b', 'c')
+    let selectedOption = null;
 
-    // --- Module Element References ---
-    // Find modules by their unique heading text. This is more reliable for Elementor.
-    const registrationModule = findModuleByHeadingText('Quiz registration');
-    const questionboxModule = findModuleByHeadingText('Question 1'); // Initial heading for question module
-    const correctBoxModule = findModuleByHeadingText('✅Correct');
-    const wrongBoxModule = findModuleByHeadingText('❌Incorrect');
-    const leaderboardModule = findModuleByHeadingText('🏆 Leaderboard');
+    // --- Improved Module Element References ---
+    function findModuleByContent(searchText) {
+        // Look for any element containing the search text
+        const elements = document.querySelectorAll('*');
+        for (const element of elements) {
+            if (element.textContent && element.textContent.trim().includes(searchText)) {
+                // Find the closest section or div that acts as a module container
+                let container = element.closest('section');
+                if (!container) {
+                    container = element.closest('.elementor-section');
+                }
+                if (!container) {
+                    container = element.closest('.elementor-widget');
+                }
+                if (!container) {
+                    container = element.closest('div[class*="elementor"]');
+                }
+                if (container) {
+                    return container;
+                }
+            }
+        }
+        return null;
+    }
+
+    // Find modules with improved detection
+    const registrationModule = findModuleByContent('Quiz Registration');
+    const questionboxModule = findModuleByContent('Question 1');
+    const correctBoxModule = findModuleByContent('✅Correct') || findModuleByContent('Correct');
+    const wrongBoxModule = findModuleByContent('❌Incorrect') || findModuleByContent('Incorrect');
+    const leaderboardModule = findModuleByContent('🏆 Leaderboard') || findModuleByContent('Leaderboard');
 
     console.log('Found modules:', {
         registration: !!registrationModule,
@@ -424,71 +446,75 @@ South bids b) 3H. This shows 5 spades and 4 hearts and offers West a choice of 3
         leaderboard: !!leaderboardModule
     });
 
-    // --- Registration Module Elements (still referenced for hiding, but not for input) ---
-    const registrationForm = registrationModule ? registrationModule.querySelector('form') : null;
-    const firstNameInput = registrationForm ? registrationForm.querySelector('input[name="form_field_name"]') : null;
-    const lastNameInput = registrationForm ? registrationForm.querySelector('input[name="form_field_name_0"]') : null;
-    const startQuizButton = registrationForm ? registrationForm.querySelector('button[type="submit"]') : null;
-
-    console.log('Registration elements (for hiding/showing):', {
-        form: !!registrationForm,
-        firstName: !!firstNameInput,
-        lastName: !!lastNameInput,
-        startButton: !!startQuizButton
-    });
-
-    // --- Question Box Module Elements ---
-    // The main heading for the question module (e.g., "Question 1")
-    const questionNumberField = questionboxModule ? questionboxModule.querySelector('h1, h2, h3, h4, h5, h6') : null;
-    // The div containing "South holds" and the hand
-    const southHandBox = questionboxModule ? questionboxModule.querySelector('.hand-box') : null;
-    // The div containing the bidding table
-    const biddingBox = questionboxModule ? questionboxModule.querySelector('.bidding-box') : null;
-    // The div containing the options buttons
-    const optionsBox = questionboxModule ? questionboxModule.querySelector('.options-container') : null;
-    // Individual option buttons (will be dynamically updated)
-    const optionA = optionsBox ? optionsBox.querySelector('.option-btn[data-option="a"]') : null;
-    const optionB = optionsBox ? optionsBox.querySelector('.option-btn[data-option="b"]') : null;
-    const optionC = optionsBox ? optionsBox.querySelector('.option-btn[data-option="c"]') : null;
-    // The "See Solution" button
-    const seeAnswerButton = questionboxModule ? questionboxModule.querySelector('.see-answer-btn') : null;
-
-    console.log('Question elements:', {
-        questionNumberField: !!questionNumberField,
-        southHandBox: !!southHandBox,
-        biddingBox: !!biddingBox,
-        optionsBox: !!optionsBox,
-        optionA: !!optionA,
-        optionB: !!optionB,
-        optionC: !!optionC,
-        seeAnswerButton: !!seeAnswerButton
-    });
-
-    // --- Correct/Incorrect Box Module Elements ---
-    const correctSolutionDiv = correctBoxModule ? correctBoxModule.querySelector('.solution-text') : null;
-    const incorrectSolutionDiv = wrongBoxModule ? wrongBoxModule.querySelector('.solution-text') : null;
-    const nextButtonCorrect = correctBoxModule ? correctBoxModule.querySelector('.next-question-btn') : null;
-    const nextButtonIncorrect = wrongBoxModule ? wrongBoxModule.querySelector('.next-question-btn') : null;
-
-    // --- Leaderboard Module Elements ---
-    const leaderboardTableBody = leaderboardModule ? leaderboardModule.querySelector('table tbody') : null; // Target tbody for dynamic updates
-    const finishButton = leaderboardModule ? leaderboardModule.querySelector('.finish-quiz-btn') : null;
-
-    // --- Helper Functions ---
-
-    // Finds the main container (section or div) for a module based on its heading text
-    function findModuleByHeadingText(headingText) {
-        const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
-        for (const heading of headings) {
-            if (heading.textContent.includes(headingText)) {
-                // Return the closest section or div that acts as the module container
-                return heading.closest('section') || heading.closest('div');
-            }
+    // --- Question Box Module Elements with fallback selectors ---
+    function findElementInModule(module, selectors) {
+        if (!module) return null;
+        
+        for (const selector of selectors) {
+            const element = module.querySelector(selector);
+            if (element) return element;
         }
         return null;
     }
 
-    // Parses the raw quiz data from the hardcoded string
+    // Find elements within modules
+    const questionNumberField = findElementInModule(questionboxModule, [
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        '.elementor-heading-title',
+        '[class*="heading"]'
+    ]);
+
+    const southHandBox = findElementInModule(questionboxModule, [
+        '.hand-box',
+        '.elementor-text-editor p',
+        '.elementor-widget-text-editor',
+        'div:contains("South holds")',
+        'p:contains("♠")'
+    ]);
+
+    const biddingBox = findElementInModule(questionboxModule, [
+        '.bidding-box',
+        'table',
+        '.elementor-widget-table',
+        'div:contains("West")'
+    ]);
+
+    const optionsBox = findElementInModule(questionboxModule, [
+        '.options-container',
+        '.elementor-button-wrapper',
+        'div:contains("A")',
+        'div:contains("2S")'
+    ]);
+
+    console.log('Question elements found:', {
+        questionNumberField: !!questionNumberField,
+        southHandBox: !!southHandBox,
+        biddingBox: !!biddingBox,
+        optionsBox: !!optionsBox
+    });
+
+    // Create dynamic elements if not found
+    function createMissingElements() {
+        if (questionboxModule && !southHandBox) {
+            const handDiv = document.createElement('div');
+            handDiv.className = 'hand-box';
+            questionboxModule.appendChild(handDiv);
+        }
+        
+        if (questionboxModule && !biddingBox) {
+            const biddingDiv = document.createElement('div');
+            biddingDiv.className = 'bidding-box';
+            questionboxModule.appendChild(biddingDiv);
+        }
+        
+        if (questionboxModule && !optionsBox) {
+            const optionsDiv = document.createElement('div');
+            optionsDiv.className = 'options-container';
+            questionboxModule.appendChild(optionsDiv);
+        }
+    }
+
+    // --- Parsing and Formatting Functions ---
     function parseQuizData(rawData) {
         console.log('Parsing quiz data...');
         const hands = [];
@@ -536,7 +562,7 @@ South bids b) 3H. This shows 5 spades and 4 hearts and offers West a choice of 3
                 });
             }
 
-            // Extract question
+            // Extract question and options
             const questionMatch = section.match(/Question:([^Solution]+)/s);
             if (questionMatch) {
                 hand.question = questionMatch[1].trim();
@@ -563,16 +589,18 @@ South bids b) 3H. This shows 5 spades and 4 hearts and offers West a choice of 3
                     hand.correctAnswer = correctAnswerMatch[1];
                 }
             }
-            hands.push(hand);
+            
+            if (hand.number) {
+                hands.push(hand);
+            }
         });
         return hands;
     }
 
-    // Formats the South hand with suit symbols and line breaks
     function formatSouthHand(handText) {
         if (!handText) return '';
         const lines = handText.split('\n');
-        let html = '<span class="south-label">South holds</span><br>'; // Use the span as in your HTML
+        let html = '<div class="south-hand-display"><span class="south-label">South holds</span><br>';
         lines.forEach(line => {
             const parts = line.split(' ');
             if (parts.length >= 2) {
@@ -583,135 +611,128 @@ South bids b) 3H. This shows 5 spades and 4 hearts and offers West a choice of 3
                 if (suit === '♦') suitClass = 'diamonds';
                 if (suit === '♣') suitClass = 'clubs';
                 html += `<span class="${suitClass}">${suit}</span> <span class="cards">${cards}</span><br>`;
-            } else {
-                html += line + '<br>';
             }
         });
+        html += '</div>';
         return html;
     }
 
-    // Formats bidding as a table
     function formatBidding(bidding) {
         if (!bidding || bidding.length === 0) return '';
+        
+        // Convert bidding array to table format
         let html = '<table class="bidding-table"><tr><th>West</th><th>North</th><th>East</th><th>South</th></tr>';
+        
+        // Parse bidding sequence
+        const bids = [];
         bidding.forEach(line => {
-            const bids = line.split('-').map(bid => bid.trim());
-            if (bids.length === 4) {
-                html += `<tr><td>${bids[0]}</td><td>${bids[1]}</td><td>${bids[2]}</td><td>${bids[3]}</td></tr>`;
+            const parts = line.split(':');
+            if (parts.length === 2) {
+                const position = parts[0].trim();
+                const bid = parts[1].trim();
+                bids.push({ position: position, bid: bid });
             }
         });
-        html += '</table>';
+        
+        // Create table row
+        const positions = ['West', 'North', 'East', 'South'];
+        let row = '<tr>';
+        positions.forEach(pos => {
+            const bidEntry = bids.find(b => b.position === pos);
+            const bidText = bidEntry ? bidEntry.bid : '-';
+            row += `<td>${bidText}</td>`;
+        });
+        row += '</tr>';
+        html += row + '</table>';
+        
         return html;
     }
 
-    // Formats options with letter circles
     function formatOptions(options) {
         if (!options) return '';
-        let html = '';
-        if (options.a) {
-            html += `<div id="option-a" class="option-btn" data-option="a"><span class="option-letter">A</span><span class="option-text">${options.a}</span></div>`; // Removed "option a)" prefix
-        }
-        if (options.b) {
-            html += `<div id="option-b" class="option-btn" data-option="b"><span class="option-letter">B</span><span class="option-text">${options.b}</span></div>`; // Removed "option b)" prefix
-        }
-        if (options.c) {
-            html += `<div id="option-c" class="option-btn" data-option="c"><span class="option-letter">C</span><span class="option-text">${options.c}</span></div>`; // Removed "option c)" prefix
-        }
-        if (options.d) { // Added support for option D
-            html += `<div id="option-d" class="option-btn" data-option="d"><span class="option-letter">D</span><span class="option-text">${options.d}</span></div>`;
-        }
+        let html = '<div class="options-wrapper">';
+        
+        Object.keys(options).forEach(letter => {
+            html += `<div class="option-btn" data-option="${letter}">
+                <span class="option-letter">${letter.toUpperCase()}</span>
+                <span class="option-text">${options[letter]}</span>
+            </div>`;
+        });
+        
+        html += '<button class="see-answer-btn" id="seeAnswerBtn" style="display:none;">See Solution</button>';
+        html += '</div>';
         return html;
     }
 
-    // Formats all four hands in diamond pattern
     function formatDiamondHand(hands) {
         if (!hands) return '';
-        const formatCardsForDisplay = (cardsText) => {
+        
+        const formatCards = (cardsText) => {
             if (!cardsText) return '';
-            const parts = cardsText.split(' ');
-            if (parts.length >= 2) {
-                return parts.slice(1).join(' ').split('').join(' '); // Get cards, then add spacing
-            }
-            return '';
+            return cardsText.split('\n').map(line => {
+                const parts = line.split(' ');
+                if (parts.length >= 2) {
+                    const suit = parts[0];
+                    const cards = parts.slice(1).join(' ');
+                    let suitClass = suit === '♥' || suit === '♦' ? 'red-suit' : 'black-suit';
+                    return `<span class="${suitClass}">${suit}</span> ${cards}`;
+                }
+                return line;
+            }).join('<br>');
         };
 
         return `
-            <div class="diamond-hand">
-                <div class="hand-label north-label">North</div>
-                <div class="hand-container north">
-                    <span class="spades">♠</span> <span class="cards">${formatCardsForDisplay(hands.north.split('\n')[0])}</span><br>
-                    <span class="hearts">♥</span> <span class="cards">${formatCardsForDisplay(hands.north.split('\n')[1])}</span><br>
-                    <span class="diamonds">♦</span> <span class="cards">${formatCardsForDisplay(hands.north.split('\n')[2])}</span><br>
-                    <span class="clubs">♣</span> <span class="cards">${formatCardsForDisplay(hands.north.split('\n')[3])}</span>
+            <div class="diamond-hand-display">
+                <div class="north-hand">
+                    <div class="hand-label">North</div>
+                    <div class="hand-cards">${formatCards(hands.north)}</div>
                 </div>
-                <div class="hand-middle">
-                    <div class="west-container">
-                        <div class="hand-label west-label">West</div>
-                        <div class="hand-container west">
-                            <span class="spades">♠</span> <span class="cards">${formatCardsForDisplay(hands.west.split('\n')[0])}</span><br>
-                            <span class="hearts">♥</span> <span class="cards">${formatCardsForDisplay(hands.west.split('\n')[1])}</span><br>
-                            <span class="diamonds">♦</span> <span class="cards">${formatCardsForDisplay(hands.west.split('\n')[2])}</span><br>
-                            <span class="clubs">♣</span> <span class="cards">${formatCardsForDisplay(hands.west.split('\n')[3])}</span>
-                        </div>
+                <div class="middle-hands">
+                    <div class="west-hand">
+                        <div class="hand-label">West</div>
+                        <div class="hand-cards">${formatCards(hands.west)}</div>
                     </div>
-                    <div class="east-container">
-                        <div class="hand-label east-label">East</div>
-                        <div class="hand-container east">
-                            <span class="spades">♠</span> <span class="cards">${formatCardsForDisplay(hands.east.split('\n')[0])}</span><br>
-                            <span class="hearts">♥</span> <span class="cards">${formatCardsForDisplay(hands.east.split('\n')[1])}</span><br>
-                            <span class="diamonds">♦</span> <span class="cards">${formatCardsForDisplay(hands.east.split('\n')[2])}</span><br>
-                            <span class="clubs">♣</span> <span class="cards">${formatCardsForDisplay(hands.east.split('\n')[3])}</span>
-                        </div>
+                    <div class="east-hand">
+                        <div class="hand-label">East</div>
+                        <div class="hand-cards">${formatCards(hands.east)}</div>
                     </div>
                 </div>
-                <div class="hand-label south-label">South</div>
-                <div class="hand-container south">
-                    <span class="spades">♠</span> <span class="cards">${formatCardsForDisplay(hands.south.split('\n')[0])}</span><br>
-                    <span class="hearts">♥</span> <span class="cards">${formatCardsForDisplay(hands.south.split('\n')[1])}</span><br>
-                    <span class="diamonds">♦</span> <span class="cards">${formatCardsForDisplay(hands.south.split('\n')[2])}</span><br>
-                    <span class="clubs">♣</span> <span class="cards">${formatCardsForDisplay(hands.south.split('\n')[3])}</span>
+                <div class="south-hand">
+                    <div class="hand-label">South</div>
+                    <div class="hand-cards">${formatCards(hands.south)}</div>
                 </div>
             </div>
         `;
     }
 
-    // --- Core Quiz Logic Functions ---
-
+    // --- Core Quiz Functions ---
     function initQuiz() {
         console.log('Initializing quiz...');
-
-        // Load quiz data from hardcoded string
+        
+        // Parse quiz data
         quizData = parseQuizData(quizRawData);
         console.log('Quiz data loaded:', quizData.length, 'questions');
         
-        // Hide all modules except questionbox initially
-        hideAllModules();
-        if (questionboxModule) {
-            questionboxModule.style.display = 'block';
-        }
+        // Create missing elements if needed
+        createMissingElements();
         
-        // Start the quiz directly (no registration form)
-        startQuiz();
-
-        // Add event listeners for options (will be re-attached in showQuestion)
-        // and other buttons
-        if (seeAnswerButton) seeAnswerButton.addEventListener('click', showAnswer);
-        if (nextButtonCorrect) nextButtonCorrect.addEventListener('click', nextQuestion);
-        if (nextButtonIncorrect) nextButtonIncorrect.addEventListener('click', nextQuestion);
-        if (finishButton) finishButton.addEventListener('click', finishQuiz);
-
-        // Add dynamic CSS for styling
+        // Hide all modules except question module
+        hideAllModules();
+        
+        // Add CSS
         addDynamicCSS();
+        
+        // Start quiz directly
+        startQuiz();
     }
 
     function startQuiz() {
-        // User info is simplified as no registration form
-        console.log('Starting quiz for:', userInfo.firstName, userInfo.lastName);
-
+        console.log('Starting quiz...');
         currentQuestion = 0;
         userScore = 0;
         userAnswers = [];
-
+        selectedOption = null;
+        
         hideAllModules();
         showQuestion(currentQuestion);
     }
@@ -721,87 +742,132 @@ South bids b) 3H. This shows 5 spades and 4 hearts and offers West a choice of 3
             console.error('Question data not available for index:', index);
             return;
         }
+        
         const question = quizData[index];
-
-        if (questionNumberField) questionNumberField.textContent = `Question ${index + 1}`;
-        if (southHandBox && question.allHands && question.allHands.south) southHandBox.innerHTML = formatSouthHand(question.allHands.south);
-        if (biddingBox && question.bidding) biddingBox.innerHTML = formatBidding(question.bidding);
-
-        // Update options and re-attach listeners
-        if (optionsBox && question.options) {
-            optionsBox.innerHTML = formatOptions(question.options);
-            const allOptionButtons = optionsBox.querySelectorAll('.option-btn');
-            allOptionButtons.forEach(btn => {
+        console.log('Showing question:', index + 1, question);
+        
+        // Update question number
+        if (questionNumberField) {
+            questionNumberField.textContent = `Question ${index + 1}`;
+        }
+        
+        // Update South hand
+        const handElement = questionboxModule?.querySelector('.hand-box') || southHandBox;
+        if (handElement && question.allHands?.south) {
+            handElement.innerHTML = formatSouthHand(question.allHands.south);
+        }
+        
+        // Update bidding
+        const biddingElement = questionboxModule?.querySelector('.bidding-box') || biddingBox;
+        if (biddingElement && question.bidding) {
+            biddingElement.innerHTML = formatBidding(question.bidding);
+        }
+        
+        // Update options
+        const optionsElement = questionboxModule?.querySelector('.options-container') || optionsBox;
+        if (optionsElement && question.options) {
+            optionsElement.innerHTML = formatOptions(question.options);
+            
+            // Add event listeners to option buttons
+            const optionButtons = optionsElement.querySelectorAll('.option-btn');
+            optionButtons.forEach(btn => {
                 btn.addEventListener('click', () => selectOption(btn.dataset.option, btn));
             });
+            
+            // Add event listener to see answer button
+            const seeAnswerBtn = optionsElement.querySelector('#seeAnswerBtn');
+            if (seeAnswerBtn) {
+                seeAnswerBtn.addEventListener('click', showAnswer);
+            }
         }
-
-        selectedOption = null; // Reset selection
-        if (seeAnswerButton) seeAnswerButton.style.display = 'none'; // Hide button initially
-        if (seeAnswerButton) seeAnswerButton.disabled = true; // Disable button initially
-
-        if (questionboxModule) questionboxModule.style.display = 'block';
+        
+        // Reset selection state
+        selectedOption = null;
+        
+        // Show question module
+        if (questionboxModule) {
+            questionboxModule.style.display = 'block';
+        }
     }
 
     function selectOption(optionValue, element) {
-        const allOptionButtons = optionsBox.querySelectorAll('.option-btn');
-        allOptionButtons.forEach(btn => btn.classList.remove('selected'));
+        // Remove selection from all options
+        const allOptions = questionboxModule?.querySelectorAll('.option-btn') || [];
+        allOptions.forEach(btn => btn.classList.remove('selected'));
+        
+        // Select this option
         element.classList.add('selected');
         selectedOption = optionValue;
-        if (seeAnswerButton) seeAnswerButton.style.display = 'block'; // Show button
-        if (seeAnswerButton) seeAnswerButton.disabled = false; // Enable button
+        
+        // Show see answer button
+        const seeAnswerBtn = questionboxModule?.querySelector('#seeAnswerBtn');
+        if (seeAnswerBtn) {
+            seeAnswerBtn.style.display = 'block';
+        }
+        
+        console.log('Selected option:', optionValue);
     }
 
     function showAnswer() {
-        if (!selectedOption) return;
+        if (!selectedOption) {
+            console.log('No option selected');
+            return;
+        }
 
         const question = quizData[currentQuestion];
         const isCorrect = selectedOption === question.correctAnswer;
-
-        userAnswers.push({ question: currentQuestion, answer: selectedOption, correct: isCorrect });
-        if (isCorrect) userScore++;
-
-        if (questionboxModule) questionboxModule.style.display = 'none';
-
-        const diamondHtml = formatDiamondHand(question.allHands);
-
+        
+        console.log('Answer check:', selectedOption, 'vs', question.correctAnswer, '=', isCorrect);
+        
+        // Record answer
+        userAnswers.push({
+            question: currentQuestion,
+            answer: selectedOption,
+            correct: isCorrect
+        });
+        
         if (isCorrect) {
-            if (correctSolutionDiv) correctSolutionDiv.innerHTML = question.solution;
-            updateDiamondDisplay(correctBoxModule, diamondHtml);
-            if (correctBoxModule) correctBoxModule.style.display = 'block';
-        } else {
-            if (incorrectSolutionDiv) incorrectSolutionDiv.innerHTML = question.solution;
-            updateDiamondDisplay(wrongBoxModule, diamondHtml);
-            if (wrongBoxModule) wrongBoxModule.style.display = 'block';
+            userScore++;
         }
-    }
-
-    // Helper to update or create diamond display within solution boxes
-    function updateDiamondDisplay(module, htmlContent) {
-        let diamondContainer = module.querySelector('.diamond-display-wrapper');
-        if (!diamondContainer) {
-            diamondContainer = document.createElement('div');
-            diamondContainer.className = 'diamond-display-wrapper';
-            // Insert before the next question button
-            const nextBtn = module.querySelector('.next-question-btn'); // Use class for consistency
-            if (nextBtn) {
-                module.insertBefore(diamondContainer, nextBtn);
-            } else {
-                module.appendChild(diamondContainer);
+        
+        // Hide question module
+        if (questionboxModule) {
+            questionboxModule.style.display = 'none';
+        }
+        
+        // Show appropriate solution module
+        const targetModule = isCorrect ? correctBoxModule : wrongBoxModule;
+        if (targetModule) {
+            // Update solution text
+            const solutionElement = targetModule.querySelector('.solution-text') || 
+                                  targetModule.querySelector('p') ||
+                                  targetModule.querySelector('div');
+            
+            if (solutionElement) {
+                const diamondHtml = formatDiamondHand(question.allHands);
+                solutionElement.innerHTML = question.solution + '<br><br>' + diamondHtml;
             }
+            
+            // Add next button if not exists
+            if (!targetModule.querySelector('.next-question-btn')) {
+                const nextBtn = document.createElement('button');
+                nextBtn.className = 'next-question-btn';
+                nextBtn.textContent = 'Next Question';
+                nextBtn.addEventListener('click', nextQuestion);
+                targetModule.appendChild(nextBtn);
+            }
+            
+            targetModule.style.display = 'block';
         }
-        diamondContainer.innerHTML = htmlContent;
     }
-
 
     function nextQuestion() {
+        // Hide solution modules
         if (correctBoxModule) correctBoxModule.style.display = 'none';
         if (wrongBoxModule) wrongBoxModule.style.display = 'none';
-
-        // Remove dynamically added diamond displays
-        document.querySelectorAll('.diamond-display-wrapper').forEach(el => el.remove());
-
+        
         currentQuestion++;
+        
         if (currentQuestion >= quizData.length) {
             showLeaderboard();
         } else {
@@ -811,512 +877,246 @@ South bids b) 3H. This shows 5 spades and 4 hearts and offers West a choice of 3
 
     function showLeaderboard() {
         hideAllModules();
-        const userFullName = `${userInfo.firstName} ${userInfo.lastName}`;
-        saveScoreToLocalStorage(userFullName, userScore);
-        updateLeaderboardDisplay();
-        if (leaderboardModule) leaderboardModule.style.display = 'block';
-    }
-
-    function saveScoreToLocalStorage(name, score) {
-        let scores = JSON.parse(localStorage.getItem('quizScores') || '[]');
-        scores.push({ name: name, score: score, date: new Date().toISOString() });
-        scores.sort((a, b) => b.score - a.score);
-        scores = scores.slice(0, 10);
-        localStorage.setItem('quizScores', JSON.stringify(scores));
-    }
-
-    function updateLeaderboardDisplay() {
-        if (!leaderboardTableBody) return;
-        const scores = JSON.parse(localStorage.getItem('quizScores') || '[]');
-        let tableHTML = '';
-        scores.forEach((score, index) => {
-            const rowClass = index % 2 === 0 ? '' : 'alternate-row';
-            tableHTML += `<tr class="${rowClass} filled-row"><td>${index + 1}</td><td>${score.name}</td><td>${score.score}</td></tr>`;
-        });
-        for (let i = scores.length; i < 10; i++) {
-            const rowClass = i % 2 === 0 ? '' : 'alternate-row';
-            tableHTML += `<tr class="${rowClass}"><td>${i + 1}</td><td></td><td></td></tr>`;
+        
+        if (leaderboardModule) {
+            // Update leaderboard content
+            const scoreDisplay = leaderboardModule.querySelector('p') || 
+                               leaderboardModule.querySelector('div');
+            
+            if (scoreDisplay) {
+                scoreDisplay.innerHTML = `
+                    <h2>Quiz Complete!</h2>
+                    <p>Your Score: ${userScore} out of ${quizData.length}</p>
+                    <p>Percentage: ${Math.round((userScore / quizData.length) * 100)}%</p>
+                    <button class="finish-quiz-btn" onclick="location.reload()">Take Quiz Again</button>
+                `;
+            }
+            
+            leaderboardModule.style.display = 'block';
         }
-        leaderboardTableBody.innerHTML = tableHTML;
-    }
-
-    function finishQuiz() {
-        hideAllModules();
-        // No registration form to clear/show, so just reset to initial state
-        // If you want to show a "Thank you" message or similar, add it here.
-        console.log("Quiz finished. Thank you for playing!");
+        
+        console.log('Quiz completed. Score:', userScore, '/', quizData.length);
     }
 
     function hideAllModules() {
-        if (registrationModule) registrationModule.style.display = 'none';
-        if (questionboxModule) questionboxModule.style.display = 'none';
-        if (correctBoxModule) correctBoxModule.style.display = 'none';
-        if (wrongBoxModule) wrongBoxModule.style.display = 'none';
-        if (leaderboardModule) leaderboardModule.style.display = 'none';
+        const modules = [registrationModule, questionboxModule, correctBoxModule, wrongBoxModule, leaderboardModule];
+        modules.forEach(module => {
+            if (module) {
+                module.style.display = 'none';
+            }
+        });
     }
 
-    // --- Dynamic CSS Injection ---
     function addDynamicCSS() {
         const style = document.createElement('style');
         style.textContent = `
-        /* General Module Styling */
-        .quiz-module {
-            background-color: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-            padding: 30px;
-            margin-bottom: 30px;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        .quiz-module-inner {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        /* Registration Form Specifics (still included for completeness, though not used in v10.0.0 flow) */
-        .elementor-form-container { /* Assuming this is the wrapper for your form */
-            /* Inherits from .quiz-module if it's the main container */
-        }
-        .elementor-field-group {
-            margin-bottom: 20px;
-        }
-        .elementor-field-label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: #333;
-        }
-        .elementor-field { /* For input fields */
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #d5d5d5;
-            border-radius: 5px;
-            font-size: 15px;
-            color: #333;
-            transition: all 0.3s;
-        }
-        .elementor-field:focus {
-            border-color: #5bc0de;
-            box-shadow: 0 0 0 2px rgba(91, 192, 222, 0.25);
-            outline: none;
-        }
-        .elementor-button { /* For the Start Quiz button */
-            background-color: #4CAF50;
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 500;
-            text-align: center;
-            transition: all 0.3s;
-            width: 100%;
-        }
-        .elementor-button:hover {
-            background-color: #45a049;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
-        }
-        .elementor-button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        .elementor-button-text {
-            display: inline-block;
-        }
-
-        /* Question Box Specifics */
-        .question-number-field {
-            background-color: #FF6F1F;
-            color: white;
-            border-radius: 12px;
-            padding: 10px 15px;
-            padding-left: 5px;
-            font-weight: 600;
-            font-size: 18px;
-            text-align: left;
-            width: fit-content;
-            margin-bottom: 10px;
-        }
-        .hand-box {
-            background-color: #f9f9f9;
-            border: 1px solid #e0e0e0;
-            border-radius: 5px;
-            padding: 15px;
-            font-family: monospace;
-            white-space: pre-line;
-            text-align: center;
-            font-size: 16px;
-            line-height: 1.5;
-        }
-        .bidding-box {
-            padding: 15px 0;
-        }
-                .bidding-table {
-            width: 100%;
-            border-collapse: collapse;
-            border: 1px solid #4CA6A8;
-            font-family: 'Open Sans', sans-serif;
-            font-size: 16px;
-            font-weight: 700;
-        }
-        .bidding-table th, .bidding-table td {
-            border: 1px solid #4CA6A8;
-            text-align: center;
-            padding: 8px;
-        }
-        .bidding-table th {
-            background-color: #f9f9f9;
-        }
-        .options-container {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .option-btn {
-            background-color: #f5f5f0;
-            border: 1px solid #e0e0d5;
-            border-radius: 8px;
-            padding: 12px 15px;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-        }
-        .option-btn:hover {
-            background-color: #f0f0e8;
-            border-color: #d0d0c8;
-        }
-        .option-btn.selected {
-            background-color: #e0f7fa;
-            border-color: #4CAF50;
-        }
-        .option-letter {
-            background-color: #4CA6A8;
-            color: white;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            margin-right: 12px;
-            font-size: 14px;
-        }
-        .option-text {
-            font-size: 16px;
-        }
-        .see-answer-btn {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 12px 20px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 500;
-            transition: all 0.3s;
-            margin-top: 10px;
-            align-self: center;
-        }
-        .see-answer-btn:hover:not(:disabled) {
-            background-color: #45a049;
-        }
-        .see-answer-btn:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-
-        /* Solution Box Specifics */
-        .solution-box {
-            border: 2px solid; /* Border color set by .correct-solution or .incorrect-solution */
-            border-radius: 12px;
-            padding: 15px;
-            background-color: #ffffff;
-        }
-        .correct-solution {
-            border-color: #4CAF50;
-        }
-        .incorrect-solution {
-            border-color: #FF0000;
-        }
-        .solution-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .solution-icon { /* For correct tick */
-            color: #4CAF50;
-            font-size: 24px;
-            font-weight: bold;
-            margin-right: 10px;
-        }
-        .solution-icon-wrong { /* For incorrect X */
-            color: #FF0000;
-            font-size: 24px;
-            font-weight: bold;
-            margin-right: 10px;
-        }
-        .solution-title { /* For correct text */
-            color: #4CAF50;
-            font-size: 16px;
-            font-weight: bold;
-        }
-        .solution-title-wrong { /* For incorrect text */
-            color: #FF0000;
-            font-size: 16px;
-            font-weight: bold;
-        }
-        .solution-text {
-            color: #000000;
-            font-size: 16px;
-            line-height: 1.5;
-        }
-
-        /* Diamond Hand Display Specifics */
-        .diamond-display-wrapper { /* Wrapper for dynamically added diamond hands */
-            border: 1px solid #ffffff; /* Matches the white background */
-            border-radius: 12px;
-            padding: 15px;
-            background-color: #ffffff;
-            margin-top: 20px; /* Space between solution text and diamond hand */
-        }
-        .diamond-hand {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            font-family: 'Open Sans', sans-serif;
-            font-size: 16px;
-        }
-        .hand-label {
-            font-family: 'Open Sans', sans-serif;
-            font-size: 20px;
-            font-weight: 800;
-            padding-bottom: 2px;
-            text-align: center;
-            margin-bottom: 0;
-        }
-        .hand-container {
-            min-width: 180px;
-            padding: 8px 12px;
-            border: 1px solid #e0e0e0;
-            border-radius: 5px;
-            background-color: #f9f9f9;
-            line-height: 1.2;
-        }
-        .hand-middle {
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            margin: 10px 0;
-            gap: 40px;
-        }
-        .west-container, .east-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .spades, .clubs {
-            color: black;
-        }
-        .hearts, .diamonds {
-            color: red;
-        }
-        .cards {
-            letter-spacing: 2px;
-        }
-
-        /* Next Question Button */
-        .next-question-btn {
-            background-color: #4CA6A8;
-            color: white;
-            border: 1px solid #4CA6A8;
-            border-radius: 12px;
-            padding: 2px 10px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 500;
-            transition: all 0.3s;
-            align-self: center;
-            margin-top: 10px;
-        }
-
-        .next-question-btn:hover {
-            background-color: #3d8587;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        }
-
-        /* Leaderboard Specifics */
-        .leaderboard-header {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 15px;
-        }
-
-        .trophy-icon {
-            font-size: 24px;
-            margin-right: 10px;
-            color: #FFD700;
-        }
-
-        .leaderboard-header h2 {
-            font-size: 24px;
-            font-weight: 600;
-            margin: 0;
-            color: #333;
-        }
-
-        .leaderboard-table {
-            width: 100%;
-            border-collapse: collapse;
-            border-radius: 5px;
-            overflow: hidden;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.05);
-        }
-
-        .leaderboard-table thead tr {
-            background-color: #4CA6A8;
-            color: white;
-            font-weight: 600;
-        }
-
-        .leaderboard-table th,
-        .leaderboard-table td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .leaderboard-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        .leaderboard-table tbody tr.alternate-row {
-            background-color: #f0f7fa;
-        }
-
-        .leaderboard-table tbody tr.filled-row {
-            font-weight: 500;
-        }
-
-        .finish-quiz-btn {
-            background-color: #4CA6A8;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 10px 20px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 500;
-            transition: all 0.3s;
-            align-self: center;
-            margin-top: 10px;
-        }
-
-        .finish-quiz-btn:hover {
-            background-color: #3d8587;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 767px) {
-            .hand-middle {
-                flex-direction: column;
-                gap: 20px;
+            /* Quiz Module Styling */
+            .south-hand-display {
+                background-color: #f9f9f9;
+                border: 1px solid #e0e0e0;
+                border-radius: 5px;
+                padding: 15px;
+                margin: 15px 0;
+                font-family: monospace;
+                font-size: 16px;
+                line-height: 1.5;
+                text-align: center;
             }
             
-            .west-container, .east-container {
+            .south-label {
+                font-weight: bold;
+                display: block;
+                margin-bottom: 10px;
+            }
+            
+            .spades, .clubs {
+                color: black;
+                font-weight: bold;
+            }
+            
+            .hearts, .diamonds, .red-suit {
+                color: red;
+                font-weight: bold;
+            }
+            
+            .black-suit {
+                color: black;
+                font-weight: bold;
+            }
+            
+            .cards {
+                letter-spacing: 1px;
+            }
+            
+            .bidding-table {
                 width: 100%;
+                border-collapse: collapse;
+                margin: 15px 0;
+                font-family: Arial, sans-serif;
             }
             
-            .hand-container {
-                width: 100%;
-                min-width: unset;
+            .bidding-table th,
+            .bidding-table td {
+                border: 1px solid #4CA6A8;
+                padding: 8px 12px;
+                text-align: center;
             }
             
-            .west, .east {
-                margin: 0;
+            .bidding-table th {
+                background-color: #4CA6A8;
+                color: white;
+                font-weight: bold;
             }
             
-            .leaderboard-table th,
-            .leaderboard-table td {
-                padding: 8px 10px;
+            .options-wrapper {
+                margin: 20px 0;
+            }
+            
+            .option-btn {
+                display: flex;
+                align-items: center;
+                background-color: #f5f5f5;
+                border: 2px solid #ddd;
+                border-radius: 8px;
+                padding: 12px 15px;
+                margin: 8px 0;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            
+            .option-btn:hover {
+                background-color: #e8f4f8;
+                border-color: #4CA6A8;
+            }
+            
+            .option-btn.selected {
+                background-color: #e0f7fa;
+                border-color: #4CAF50;
+                box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+            }
+            
+            .option-letter {
+                background-color: #4CA6A8;
+                color: white;
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                margin-right: 12px;
                 font-size: 14px;
             }
-        }
-        `; // This closes the style.textContent backtick string
-        document.head.appendChild(style); // This appends the style element to the head
-    } // This closes the addDynamicCSS function
-
-    // Helper function to find elements by text content (for Element.prototype.querySelector)
-    // This is a polyfill for :contains() selector, which is not standard CSS
-    // It's placed here to ensure it's available before initQuiz is called.
-    // Note: This polyfill is for Element.prototype.querySelector.
-    // If you are using a very old browser, you might need polyfills for matches/closest too.
-    // Modern browsers generally support matches/closest.
-    (function() {
-        // Polyfill for Element.prototype.matches
-        if (!Element.prototype.matches) {
-            Element.prototype.matches = Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector;
-        }
-
-        // Polyfill for Element.prototype.closest
-        if (!Element.prototype.closest) {
-            Element.prototype.closest = function(s) {
-                var el = this;
-                do {
-                    if (el.matches(s)) return el;
-                    el = el.parentElement || el.parentNode;
-                } while (el !== null && el.nodeType === 1);
-                return null;
-            };
-        }
-
-        // Custom querySelector for :contains()
-        var originalQuerySelector = Element.prototype.querySelector;
-        Element.prototype.querySelector = function(selector) {
-            if (selector.includes(':contains(')) {
-                const match = selector.match(/(.*):contains\("(.*)"\)(.*)/);
-                if (match) {
-                    const [_, before, text, after] = match;
-                    const elements = this.querySelectorAll(before + after);
-                    for (let i = 0; i < elements.length; i++) {
-                        if (elements[i].textContent.includes(text)) {
-                            return elements[i];
-                        }
-                    }
-                    return null;
+            
+            .option-text {
+                font-size: 16px;
+                flex: 1;
+            }
+            
+            .see-answer-btn,
+            .next-question-btn,
+            .finish-quiz-btn {
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 12px 20px;
+                margin: 15px 0;
+                cursor: pointer;
+                font-size: 16px;
+                font-weight: 500;
+                transition: all 0.3s ease;
+            }
+            
+            .see-answer-btn:hover,
+            .next-question-btn:hover,
+            .finish-quiz-btn:hover {
+                background-color: #45a049;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            }
+            
+            .diamond-hand-display {
+                border: 2px solid #4CA6A8;
+                border-radius: 10px;
+                padding: 20px;
+                margin: 20px 0;
+                background-color: #f9f9f9;
+                font-family: monospace;
+                font-size: 14px;
+            }
+            
+            .diamond-hand-display .north-hand,
+            .diamond-hand-display .south-hand {
+                text-align: center;
+                margin: 15px 0;
+            }
+            
+            .diamond-hand-display .middle-hands {
+                display: flex;
+                justify-content: space-between;
+                margin: 20px 0;
+            }
+            
+            .diamond-hand-display .west-hand,
+            .diamond-hand-display .east-hand {
+                flex: 1;
+                text-align: center;
+            }
+            
+            .diamond-hand-display .hand-label {
+                font-weight: bold;
+                font-size: 16px;
+                margin-bottom: 8px;
+                text-decoration: underline;
+            }
+            
+            .diamond-hand-display .hand-cards {
+                line-height: 1.4;
+            }
+            
+            /* Mobile responsiveness */
+            @media (max-width: 768px) {
+                .diamond-hand-display .middle-hands {
+                    flex-direction: column;
+                    gap: 15px;
+                }
+                
+                .option-btn {
+                    padding: 10px 12px;
+                }
+                
+                .option-letter {
+                    width: 24px;
+                    height: 24px;
+                    font-size: 12px;
+                    margin-right: 8px;
+                }
+                
+                .option-text {
+                    font-size: 14px;
+                }
+                
+                .bidding-table th,
+                .bidding-table td {
+                    padding: 6px 8px;
+                    font-size: 14px;
+                }
+                
+                .south-hand-display {
+                    font-size: 14px;
+                    padding: 12px;
+                }
+                
+                .diamond-hand-display {
+                    padding: 15px;
+                    font-size: 12px;
                 }
             }
-            return originalQuerySelector.call(this, selector);
-        };
+        `;
+        document.head.appendChild(style);
+    }
 
-        var originalQuerySelectorAll = Element.prototype.querySelectorAll;
-        Element.prototype.querySelectorAll = function(selector) {
-            if (selector.includes(':contains(')) {
-                const match = selector.match(/(.*):contains\("(.*)"\)(.*)/);
-                if (match) {
-                    const [_, before, text, after] = match;
-                    const elements = originalQuerySelectorAll.call(this, before + after);
-                    const filtered = [];
-                    for (let i = 0; i < elements.length; i++) {
-                        if (elements[i].textContent.includes(text)) {
-                            filtered.push(elements[i]);
-                        }
-                    }
-                    return filtered;
-                }
-            }
-            return originalQuerySelectorAll.call(this, selector);
-        };
-    })();
-
-
-    // Initialize the quiz
+    // Initialize the quiz when DOM is ready
     initQuiz();
-}); // This closes the main DOMContentLoaded function
+});
